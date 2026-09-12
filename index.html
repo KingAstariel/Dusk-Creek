@@ -1,0 +1,1724 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Système de Gestion - In-Game & Database</title>
+    <style>
+        :root {
+            --theme-red: #D91A2A;
+            --theme-dark-red: #5c0b11;
+            --theme-black: #0d0d0d;
+            --theme-panel: #141414;
+            --theme-gray: #242424;
+            --theme-light-gray: #444444;
+            --theme-text: #e0e0e0;
+            --theme-yellow: #ffeb3b;
+            --theme-green: #4CAF50;
+            --theme-purple: #9C27B0;
+            --theme-blue: #00bcd4;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Anton&family=Roboto:wght@400;700&display=swap');
+
+        body {
+            background-color: var(--theme-black);
+            color: var(--theme-text);
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 15px;
+            overflow-x: hidden;
+        }
+
+        h1, h2, h3, .title-font {
+            font-family: 'Anton', sans-serif;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .main-nav {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            background: #000;
+            padding: 10px;
+            border-bottom: 3px solid var(--theme-red);
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .nav-tab {
+            background: var(--theme-gray);
+            color: var(--theme-text);
+            border: none;
+            padding: 10px 18px;
+            font-family: 'Anton', sans-serif;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transform: skewX(-8deg);
+            transition: 0.15s ease-in-out;
+        }
+
+        .nav-tab:hover { background: var(--theme-light-gray); color: white; }
+        .nav-tab.active { background: var(--theme-red); color: white; box-shadow: 3px 3px 0 var(--theme-text); }
+        .nav-tab.mode-jeu { background: var(--theme-dark-red); border: 1px solid var(--theme-red); color: var(--theme-yellow); margin-left: 10px;}
+        .nav-tab.mode-jeu.active { background: var(--theme-red); color: black; }
+
+        .golden-box {
+            display: flex; align-items: center; gap: 8px; 
+            background: linear-gradient(135deg, #FFD700 0%, #B8860B 100%);
+            color: black; padding: 6px 15px; 
+            border: 2px solid #FFF8DC; 
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+            font-family: 'Anton', sans-serif; font-size: 1.2rem; 
+            transform: skewX(-8deg);
+            margin-left: auto; /* Pousse les éléments de droite */
+        }
+
+        .dusk-counter-box {
+            display: flex; align-items: center; gap: 10px; background: #111; 
+            padding: 6px 12px; border: 2px solid var(--theme-purple); transform: skewX(-8deg);
+        }
+        .dusk-counter-box button { background: var(--theme-gray); color: white; border: 1px solid #444; cursor: pointer; padding: 2px 8px; font-weight: bold; }
+        .dusk-counter-box button:hover { background: var(--theme-red); }
+
+        .layout { display: flex; gap: 15px; height: calc(100vh - 120px); }
+        .sidebar { flex: 1; background: var(--theme-panel); border: 2px solid var(--theme-gray); padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+        .workspace { flex: 3; background: var(--theme-panel); border: 2px solid var(--theme-red); padding: 20px; overflow-y: auto; position: relative; }
+
+        .item-card { background: var(--theme-gray); padding: 10px; cursor: pointer; font-weight: bold; border-left: 4px solid transparent; display: flex; justify-content: space-between; align-items: center; transform: skewX(-4deg); }
+        .item-card:hover, .item-card.active { background: var(--theme-dark-red); border-left-color: var(--theme-red); }
+
+        .folder-header { color: var(--theme-yellow); margin: 10px 0 5px 0; border-bottom: 1px solid #444; font-family: 'Anton', sans-serif; font-size: 1.1rem; }
+
+        .btn { background: var(--theme-gray); color: white; border: 1px solid var(--theme-light-gray); padding: 8px 12px; cursor: pointer; font-family: 'Anton', sans-serif; text-transform: uppercase; }
+        .btn:hover { background: var(--theme-light-gray); }
+        .btn-add { background: var(--theme-red); border: none; font-size: 1rem;}
+        .btn-add:hover { background: #ff1c2e; }
+        .btn-danger { background: #b71c1c; border: none; color: white; font-size: 0.8rem; padding: 4px 8px;}
+        .btn-danger:hover { background: #e53935; }
+
+        .form-block { background: rgba(0,0,0,0.4); padding: 12px; margin-bottom: 12px; border: 1px dashed var(--theme-light-gray); }
+        .form-block label { display: block; color: var(--theme-red); font-family: 'Anton', sans-serif; font-size: 0.95rem; margin-bottom: 4px; }
+        input[type="text"], input[type="number"], select, textarea { width: 100%; background: #000; color: white; border: 1px solid var(--theme-light-gray); padding: 8px; box-sizing: border-box; font-family: inherit; }
+        input:focus, select:focus, textarea:focus { border-color: var(--theme-red); outline: none; }
+        input[type="number"] { color: var(--theme-yellow); font-weight: bold; }
+        .flex-grid { display: flex; gap: 10px; margin-bottom: 10px; }
+        .col { flex: 1; }
+
+        .ingame-dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .ingame-box { background: #080808; border: 2px solid var(--theme-gray); padding: 15px; position: relative; }
+        .ingame-box.accent { border-color: var(--theme-red); }
+        .ingame-box h3 { background: var(--theme-red); color: white; padding: 4px 10px; margin:-15px -15px 15px -15px; font-size: 1.2rem; transform: skewX(-6deg); }
+        
+        .bar-container { background: #222; height: 16px; border: 1px solid #444; margin-top: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; transition: width 0.3s; }
+        .bar-fill.hp { background: var(--theme-red); }
+        .bar-fill.sp { background: var(--theme-green); }
+
+        .game-stat-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #1a1a1a; }
+        .game-stat-val { font-family: 'Anton', sans-serif; font-size: 1.3rem; color: var(--theme-yellow); }
+
+        .icon-pv { color: var(--theme-red); font-weight: bold; }
+        .icon-sm { color: var(--theme-green); font-weight: bold; }
+        .icon-key { color: var(--theme-yellow); font-weight: bold; }
+        .icon-xyz { color: var(--theme-purple); font-weight: bold; }
+
+        .inventory-list { max-height: 250px; overflow-y: auto; background: #111; padding: 5px; border: 1px solid #333; }
+        .inv-item { display: flex; justify-content: space-between; align-items: center; padding: 8px; border-bottom: 1px solid #222; background: #0a0a0a; margin-bottom: 4px; }
+        .inv-item button { padding: 4px 8px; font-size: 0.8rem; }
+
+        .stats-exp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #000; padding: 10px; margin-top: 10px; border: 1px solid #333; }
+        .stats-exp-item { color: #ccc; font-size: 0.95rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed #222; padding-bottom: 4px; }
+        .stat-direct-input { width: 50px !important; padding: 4px !important; margin-left: 8px; text-align: center; }
+
+        .skill-card { background: #1a1a1a; border-left: 3px solid var(--theme-light-gray); padding: 10px; margin-bottom: 10px; font-size: 0.9rem; }
+        .skill-card.mask-skill { border-left-color: var(--theme-purple); }
+        .skill-card.hero-skill { border-left-color: var(--theme-red); }
+        .skill-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .skill-title { font-family: 'Anton', sans-serif; font-size: 1.1rem; color: white; letter-spacing: 0.5px; display: flex; align-items: center; gap: 5px;}
+        .skill-lvl-badge { background: #333; padding: 2px 6px; font-size: 0.75rem; border-radius: 4px; border: 1px solid #555; }
+        .skill-dmg-dice { color: var(--theme-yellow); font-weight: bold; }
+        .skill-type { color: #aaa; font-style: italic; font-size: 0.8rem; }
+        .skill-effect { color: var(--theme-blue); margin-top: 4px; display: block; }
+        .skill-mask-active { color: var(--theme-green); margin-top: 2px; display: block; font-weight: bold; }
+        .skill-contrecoup { color: var(--theme-red); margin-top: 2px; display: block; }
+        .skill-desc { color: #888; font-style: italic; margin-top: 6px; display: block; border-top: 1px dashed #333; padding-top: 4px; }
+        .skill-exp-bar { background: #222; height: 4px; margin-top: 5px; overflow: hidden; }
+        .skill-exp-fill { background: var(--theme-yellow); height: 100%; }
+
+        .editor-array-item { background: #111; border: 1px solid #333; padding: 10px; margin-bottom: 10px; position: relative; }
+        .editor-array-item input { margin-bottom: 5px; }
+        .btn-remove-array { position: absolute; top: 10px; right: 10px; }
+
+        .checkbox-label { background:#111; padding:6px 12px; border:1px solid #444; cursor:pointer; color:#ccc; display: flex; align-items: center; gap: 8px; font-size: 0.9rem; transition: 0.2s; }
+        .checkbox-label:hover { background: #222; border-color: var(--theme-red); }
+        .checkbox-label input { width: auto; }
+
+        #log-panel { position: fixed; bottom: 15px; right: 15px; background: var(--theme-red); color: white; padding: 10px 20px; font-family: 'Anton', sans-serif; transform: skewX(-10deg); display: none; z-index: 100; border: 2px solid white; box-shadow: 0 0 10px black; }
+        #overlay-alert { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:1000; justify-content:center; align-items:center; backdrop-filter: blur(4px); }
+        .alert-box { background:var(--theme-dark-red); border:3px solid var(--theme-red); padding:40px; text-align:center; max-width:600px; transform: skewX(-2deg); box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+    </style>
+</head>
+<body>
+
+<div id="login-overlay" style="display:none;position:fixed;inset:0;background:var(--theme-black);align-items:center;justify-content:center;z-index:500;">
+  <div style="background:var(--theme-panel);border:1px solid var(--theme-red);border-radius:6px;padding:28px 30px;width:320px;max-width:90vw;">
+    <h2 class="title-font" style="color:var(--theme-red);text-align:center;margin:0 0 6px;">Dusk Creek</h2>
+    <p style="color:#888;font-size:13px;text-align:center;margin:0 0 16px;">Connecte-toi pour accéder à la campagne.</p>
+    <label style="display:block;font-size:13px;color:#aaa;margin:10px 0 4px;">Courriel</label>
+    <input type="email" id="login-email" autocomplete="username" style="width:100%;padding:8px 9px;border-radius:4px;border:1px solid var(--theme-light-gray);background:#1a1a1a;color:var(--theme-text);box-sizing:border-box;">
+    <label style="display:block;font-size:13px;color:#aaa;margin:10px 0 4px;">Mot de passe</label>
+    <input type="password" id="login-password" autocomplete="current-password" style="width:100%;padding:8px 9px;border-radius:4px;border:1px solid var(--theme-light-gray);background:#1a1a1a;color:var(--theme-text);box-sizing:border-box;">
+    <div id="login-error" style="color:#e07a7a;font-size:12.5px;margin-top:8px;min-height:16px;"></div>
+    <button id="login-submit" class="btn" style="width:100%;margin-top:14px;border-color:var(--theme-red);">Se connecter</button>
+  </div>
+</div>
+
+
+<div class="main-nav">
+    <button class="nav-tab active" onclick="changeTab('heroes')">Héros</button>
+    <button class="nav-tab" onclick="changeTab('masks')">Masques</button>
+    <button class="nav-tab" onclick="changeTab('equipments')">Équipements</button>
+    <button class="nav-tab" onclick="changeTab('passives')">Passifs & Magie</button>
+    <button class="nav-tab" onclick="changeTab('items')">Objets</button>
+    <button class="nav-tab" onclick="changeTab('system')">Sauvegarde</button>
+    <button class="nav-tab" onclick="changeTab('notes')">Notes</button>
+    
+    <div class="golden-box">
+        💰 $<span id="total-money-display">0.00</span>
+    </div>
+
+    <div class="dusk-counter-box">
+        <span class="title-font" style="color:var(--theme-purple); font-size:0.9rem;">Essence Dusk Creek</span>
+        <button onclick="changeDusk(-1)">-</button>
+        <span id="dusk-display" style="color:white; font-family:'Anton', sans-serif; font-size:1.2rem; min-width:45px; text-align:center;">10/10</span>
+        <button onclick="changeDusk(1)">+</button>
+    </div>
+
+    <button class="nav-tab mode-jeu" onclick="changeTab('playmode')">⚔️ MODE JEU</button>
+</div>
+
+<div id="overlay-alert">
+    <div class="alert-box">
+        <h2 style="color:var(--theme-yellow); font-family:'Anton', sans-serif; font-size:2.5rem; margin-top:0;">⚠️ DUSK CREEK EN PÉRIL ⚠️</h2>
+        <p id="overlay-alert-text" style="font-size:1.3rem; margin-bottom:30px; font-weight:bold;"></p>
+        <button class="btn" style="font-size:1.2rem; padding: 10px 30px;" onclick="document.getElementById('overlay-alert').style.display='none'">Compris</button>
+    </div>
+</div>
+
+<div class="layout" id="standard-layout">
+    <div class="sidebar" id="sidebar-list"></div>
+    <div class="workspace" id="editor-workspace"></div>
+</div>
+
+<div class="workspace" id="playmode-layout" style="display: none; border-color: var(--theme-red); height: calc(100vh - 120px);">
+    <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 10px; background: #000; padding: 10px;">
+        <span class="title-font" style="color: var(--theme-red); font-size: 1.2rem;">Héros Actif :</span>
+        <select id="playmode-hero-select" onchange="selectPlaymodeHero(this.value)" style="width: auto; min-width: 200px; border-color: var(--theme-red);"></select>
+    </div>
+    <div class="ingame-dashboard" id="playmode-dashboard"></div>
+</div>
+
+<div class="workspace" id="system-layout" style="display: none; height: calc(100vh - 120px); text-align: center; padding-top: 100px;">
+    <h2 style="color: var(--theme-red); font-size: 2rem;">Menu Système Fichiers</h2>
+    <p style="color: #888;">Exportez ou importez l'intégralité de votre campagne (incluant vos notes).</p>
+    <br><br>
+    <button class="btn" onclick="saveSystemData()" style="padding: 15px 30px; font-size: 1.2rem; border-color: var(--theme-red);">💾 Sauvegarder (Exporter JSON)</button>
+    <br><br>
+    <button class="btn" onclick="saveSystemDataSophie()" style="padding: 15px 30px; font-size: 1.2rem; border-color: var(--theme-blue);">💾 Sauvegarde pour Sophie</button>
+    <br><br>
+    <div style="display: inline-block; background: var(--theme-gray); padding: 15px; border: 1px dashed var(--theme-red);">
+        <label class="title-font" style="display: block; margin-bottom: 5px;">Charger un fichier de sauvegarde :</label>
+        <input type="file" id="import-file-field" accept=".json" onchange="loadSystemData(event)">
+    </div>
+</div>
+
+<div id="log-panel">Action Enregistrée</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script>
+    // ---------------- persistent storage (shared Firebase project with the Grimoire,
+    // separate data key so the two apps never collide) ----------------
+    const STORAGE_KEY = 'duskcreek-state';
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDaPSNXSHuUiqwspDrUvylpZbrko48EjeQ",
+      authDomain: "roman-d31d5.firebaseapp.com",
+      projectId: "roman-d31d5",
+      storageBucket: "roman-d31d5.firebasestorage.app",
+      messagingSenderId: "1025372403933",
+      appId: "1:1025372403933:web:520cbefe0f66b6a1848334"
+    };
+
+    let firestoreDb = null;
+    try{
+      if(typeof firebase !== 'undefined' && firebaseConfig.apiKey){
+        firebase.initializeApp(firebaseConfig);
+        firestoreDb = firebase.firestore();
+      }
+    }catch(e){ console.error('Firebase init failed, falling back.', e); firestoreDb = null; }
+
+    const firestoreAdapter = firestoreDb ? {
+      async get(key){
+        const snap = await firestoreDb.collection('kv').doc(key).get();
+        if(!snap.exists) return null;
+        return {key, value: snap.data().value};
+      },
+      async set(key, value){
+        await firestoreDb.collection('kv').doc(key).set({value});
+        return {key, value};
+      }
+    } : null;
+
+    const hasArtifactStorage = (typeof window.storage !== 'undefined' && window.storage && typeof window.storage.get === 'function');
+    const localAdapter = {
+      async get(key){
+        const v = localStorage.getItem(key);
+        return v===null ? null : {key, value:v};
+      },
+      async set(key, value){
+        localStorage.setItem(key, value);
+        return {key, value};
+      }
+    };
+    const storage = firestoreAdapter || (hasArtifactStorage ? window.storage : localAdapter);
+
+    let saveTimer = null;
+    function scheduleSave(){
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(async ()=>{
+        try{ await storage.set(STORAGE_KEY, JSON.stringify(db)); }
+        catch(e){ console.error('Sauvegarde impossible', e); }
+      }, 400);
+    }
+
+    let db = {
+        systemState: { duskCounter: 10, duskMax: 10 },
+        heroes: [
+            {
+                id: "h-1", nom: "Melissa Tryckwi", argent: 524, niv: 1, exp: 0,
+                hp: 168, maxHp: 168, sp: 56, maxSp: 56, maxAp: 5,
+                statsHorsCombat: { force: 4, agilite: 8, investigation: 6, social: 16, dexterite: 12, intuition: 14 },
+                expStats: { force: 0, agilite: 0, investigation: 0, social: 0, dexterite: 0, intuition: 0 },
+                equipement: { arme: "e-1", veste: "e-2", soulier: "e-3", accessoire: "" }, masqueActif: "m-1",
+                passifsMagie: ["p-1", "p-2"], 
+                attaques: [
+                    { nom: "Jab Clinique", type: "poings", degats: "5", des: "D20", effet: "", contrecoup: "", desc: "Un coup de poing rapide conçu pour maintenir la distance et évaluer les réflexes de la cible.", niv: 1, exp: 0 },
+                    { nom: "Low Kick Punitif", type: "jambes", degats: "8", des: "D10 (×2)", effet: "", contrecoup: "", desc: "Une frappe ciblée exactement sur l'articulation. Elle sait où ça fait mal.", niv: 1, exp: 0 },
+                    { nom: "Triage d'Urgence", type: "soin", degats: "-", des: "-", effet: "Restaure 15 PV à un allié.", contrecoup: "-3 SM.", desc: "Les premiers soins appliqués à la hâte. Efficace, mais mentalement épuisant au milieu du chaos.", niv: 1, exp: 0 },
+                    { nom: "Adrénaline Synthétique", type: "stimulant", degats: "-", des: "-", effet: "+3 Dextérité, +2 Esquive (2 tours).", contrecoup: "-2 SM/tour.", desc: "Un boost chimique puisé dans sa trousse. Le rythme cardiaque s'emballe.", niv: 1, exp: 0 }
+                ]
+            }
+        ],
+        masks: [
+            {
+                id: "m-1", nom: "Le Masque de l'Hippocrate", niv: 1, exp: 0,
+                statsCombat: { forceCombat: 1, defense: 4, esquive: 4 }, bonusSocial: 2, elements: "Eau / Herbe",
+                competences: [
+                    { nom: "Sève Nécrosée", type: "Herbe", degats: "6", des: "D10 (×2)", effet: "Les racines s'insinuent dans la chair.", effetMasque: "Inflige un malus de -2 en Agilité à l'ennemi pour 2 tours.", contrecoup: "", desc: "", niv: 1, exp: 0 },
+                    { nom: "Transfusion Forcée", type: "Eau", degats: "7", des: "D20", effet: "L'eau draine l'essence vitale.", effetMasque: "Vole 4 PV à l'ennemi et les redonne à Melissa.", contrecoup: "", desc: "", niv: 1, exp: 0 },
+                    { nom: "Le Remède Pire Que Le Mal", type: "Eau+Herbe", degats: "4", des: "D20 (×2) add", effet: "Double dégât.", effetMasque: "Empoisonne l'ennemi (2 PV/tour pendant 3 tours) MAIS soigne un allié au choix de 5 PV simultanément.", contrecoup: "-2 SM/utilisation.", desc: "", niv: 1, exp: 0 }
+                ]
+            }
+        ],
+        passives: [
+            { id: "p-1", nom: "Diagnostic Froid", type: "Passif", cout: 15, coutAp: 3, duree: "1 Scène", desc: "Déformation professionnelle oblige, l'intuition de Melissa s'aiguise face aux blessures. Une fois activé, son regard clinique identifie immédiatement la pire faille anatomique de ses adversaires. Chaque fois qu'un ennemi perd plus de 25% de ses PV, la prochaine attaque ciblée sur cet ennemi par n'importe quel membre du groupe (y compris Melissa) ignore une partie de la défense adverse (Dégâts augmentés de +3).", actionType: "none", target: "none", power: 0 },
+            { id: "p-2", nom: "Lueur Apaisante", type: "Magie", cout: 15, coutAp: 3, duree: "Instantané", desc: "Magie curative.", actionType: "pv", target: "single", power: 40 }
+        ],
+        equipments: [
+            { id: "e-1", nom: "The Heavy-Duty Hand Wraps (Melissa)", type: "arme", stats: { forceCombat: "1", dexterite: "2", intuition: "1" }, passifLie: "" },
+            { id: "e-2", nom: "The Paramedic Windbreaker (Melissa)", type: "veste", stats: { defense: "4", intuition: "1", social: "1" }, passifLie: "" },
+            { id: "e-3", nom: "The Steel-Toe Duty Boots (Melissa)", type: "soulier", stats: { defense: "2", esquive: "2", dexterite: "1" }, passifLie: "" }
+        ],
+        items: [
+            { id: "i-frag1", ownerId: "h-1", nom: "Petit Fragment de Masque", type: "frag", target: "single", power: 25, qty: 5, desc: "Donne 25 EXP au masque ou à un sort/attaque." },
+            { id: "i-frag2", ownerId: "h-1", nom: "Moyen Fragment de Masque", type: "frag", target: "single", power: 50, qty: 3, desc: "Donne 50 EXP au masque ou à un sort/attaque." },
+            { id: "i-frag3", ownerId: "h-1", nom: "Grand Fragment de Masque", type: "frag", target: "single", power: 100, qty: 1, desc: "Donne 100 EXP au masque ou à un sort/attaque." },
+            { id: "i-frag4", ownerId: "h-1", nom: "Énorme Fragment de Masque", type: "frag", target: "single", power: 250, qty: 0, desc: "Donne 250 EXP au masque ou à un sort/attaque." },
+            { id: "i-frag5", ownerId: "h-1", nom: "Fragment de Masque Parfait", type: "frag", target: "single", power: 500, qty: 0, desc: "Donne 500 EXP au masque ou à un sort/attaque." },
+            { id: "i-1", ownerId: "h-1", nom: "Ration de Survie", type: "pv", target: "single", power: 50, qty: 3, desc: "Restaure 50 PV." }
+        ],
+        notes: [
+            { id: "n-1", nom: "Informations Importantes", folder: "Général", type: "text", content: "Notes pour le scénario...", excelData: [["", "", ""], ["", "", ""]] }
+        ]
+    };
+
+    let activeTab = 'heroes';
+    let selectedId = 'h-1';
+    let activeFragId = null; 
+    let itemFoldersExpanded = {}; 
+
+    function getExpReq(niv) { return Math.floor(50 * Math.pow(1.3, niv - 1)); }
+    function getSkillExpReq(niv) { return 50; } 
+
+    function updateTopBar() {
+        document.getElementById('dusk-display').innerText = `${db.systemState.duskCounter}/${db.systemState.duskMax}`;
+        
+        // Calcule le total de l'argent de tous les personnages
+        let total = db.heroes.reduce((sum, h) => sum + parseFloat(h.argent || 0), 0);
+        let display = document.getElementById('total-money-display');
+        if(display) display.innerText = total.toFixed(2);
+    }
+
+    function changeDusk(amount) {
+        db.systemState.duskCounter += amount;
+        
+        if(db.systemState.duskCounter <= 0) {
+            document.getElementById('overlay-alert-text').innerText = "DUSK CREEK PERD SON ESSENCE ! Une personne tombera malade.";
+            document.getElementById('overlay-alert').style.display = 'flex';
+            
+            db.systemState.duskMax = Math.min(50, db.systemState.duskMax + 5);
+            db.systemState.duskCounter = db.systemState.duskMax;
+        }
+        
+        if(db.systemState.duskCounter > db.systemState.duskMax) {
+            db.systemState.duskCounter = db.systemState.duskMax;
+        }
+        updateTopBar();
+    }
+
+    function changeTab(tabName) {
+        activeTab = tabName;
+        activeFragId = null; 
+        document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+        event.target.classList.add('active');
+
+        document.getElementById('standard-layout').style.display = 'none';
+        document.getElementById('playmode-layout').style.display = 'none';
+        document.getElementById('system-layout').style.display = 'none';
+
+        if (tabName === 'playmode') {
+            document.getElementById('playmode-layout').style.display = 'block';
+            populatePlaymodeHeroSelect();
+            renderPlaymode();
+        } else if (tabName === 'system') {
+            document.getElementById('system-layout').style.display = 'block';
+        } else {
+            document.getElementById('standard-layout').style.display = 'flex';
+            if(activeTab === 'notes') {
+                selectedId = db.notes.length > 0 ? db.notes[0].id : null;
+            } else if(activeTab === 'items') {
+                selectedId = db.items.length > 0 ? db.items[0].id : null;
+            } else {
+                selectedId = db[activeTab].length > 0 ? db[activeTab][0].id : null;
+            }
+            renderSidebar();
+            renderEditor();
+        }
+    }
+
+    function renderSidebar() {
+        const sidebar = document.getElementById('sidebar-list');
+        sidebar.innerHTML = '';
+
+        let addLabel = "Créer";
+        if(activeTab === 'heroes') addLabel = "Héros";
+        if(activeTab === 'masks') addLabel = "Masque";
+        if(activeTab === 'passives') addLabel = "Compétence";
+        if(activeTab === 'equipments') addLabel = "Équipement";
+        if(activeTab === 'items') addLabel = "Objet";
+        if(activeTab === 'notes') addLabel = "Note";
+
+        let addBtn = document.createElement('button');
+        addBtn.className = "btn btn-add";
+        addBtn.innerText = `+ ${addLabel}`;
+        addBtn.onclick = createNewEntity;
+        sidebar.appendChild(addBtn);
+
+        if (activeTab === 'items') {
+            db.heroes.forEach(hero => {
+                let fDiv = document.createElement('div');
+                fDiv.className = "folder-header";
+                fDiv.style.cursor = "pointer";
+                
+                let isExpanded = itemFoldersExpanded[hero.id] !== false; 
+                fDiv.innerText = `${isExpanded ? '📂' : '📁'} ${hero.nom}`;
+                
+                fDiv.onclick = () => {
+                    itemFoldersExpanded[hero.id] = !isExpanded;
+                    renderSidebar();
+                };
+                
+                sidebar.appendChild(fDiv);
+
+                if (isExpanded) {
+                    let heroItems = db.items.filter(item => item.ownerId === hero.id || (!item.ownerId && hero.id === db.heroes[0].id) || (!db.heroes.find(h=>h.id===item.ownerId) && hero.id === db.heroes[0].id));
+                    
+                    heroItems.forEach(item => {
+                        let card = document.createElement('div');
+                        card.className = `item-card ${item.id === selectedId ? 'active' : ''}`;
+                        
+                        let prefix = "";
+                        if(item.type === 'pv') prefix = "♥ ";
+                        else if(item.type === 'sm') prefix = "♣ ";
+                        else if(item.type === 'frag') prefix = "🧩 ";
+                        else if(item.type === 'key') prefix = "🔑 ";
+                        else if(item.type === 'xyz') prefix = "⚗️ ";
+
+                        card.innerHTML = `<span>${prefix}${item.nom || 'Sans nom'} (x${item.qty})</span>`;
+                        
+                        let delBtn = document.createElement('button');
+                        delBtn.className = "btn-danger";
+                        delBtn.innerText = "X";
+                        delBtn.onclick = (e) => { e.stopPropagation(); deleteEntity(item.id); };
+                        
+                        card.appendChild(delBtn);
+                        card.onclick = () => { selectedId = item.id; renderSidebar(); renderEditor(); };
+                        sidebar.appendChild(card);
+                    });
+                }
+            });
+        }
+        else if (activeTab === 'notes') {
+            let folders = {};
+            db.notes.forEach(item => {
+                let f = item.folder || "Général";
+                if(!folders[f]) folders[f] = [];
+                folders[f].push(item);
+            });
+            for (let f in folders) {
+                let fDiv = document.createElement('div');
+                fDiv.className = "folder-header";
+                fDiv.innerText = `📁 ${f}`;
+                sidebar.appendChild(fDiv);
+                
+                folders[f].forEach(item => {
+                    let card = document.createElement('div');
+                    card.className = `item-card ${item.id === selectedId ? 'active' : ''}`;
+                    card.innerHTML = `<span>📄 ${item.nom || 'Nouvelle note'}</span>`;
+                    
+                    let delBtn = document.createElement('button');
+                    delBtn.className = "btn-danger";
+                    delBtn.innerText = "X";
+                    delBtn.onclick = (e) => { e.stopPropagation(); deleteEntity(item.id); };
+                    
+                    card.appendChild(delBtn);
+                    card.onclick = () => { selectedId = item.id; renderSidebar(); renderEditor(); };
+                    sidebar.appendChild(card);
+                });
+            }
+        } else {
+            db[activeTab].forEach(item => {
+                let card = document.createElement('div');
+                card.className = `item-card ${item.id === selectedId ? 'active' : ''}`;
+                
+                let prefix = "";
+                if (activeTab === 'passives') {
+                    prefix = item.type === 'Passif' ? "🧿 " : "✨ ";
+                }
+
+                card.innerHTML = `<span>${prefix}${item.nom || 'Sans nom'}</span>`;
+                
+                let delBtn = document.createElement('button');
+                delBtn.className = "btn-danger";
+                delBtn.innerText = "X";
+                delBtn.onclick = (e) => { e.stopPropagation(); deleteEntity(item.id); };
+                
+                card.appendChild(delBtn);
+                card.onclick = () => { selectedId = item.id; renderSidebar(); renderEditor(); };
+                sidebar.appendChild(card);
+            });
+        }
+    }
+
+    function deleteEntity(id) {
+        db[activeTab] = db[activeTab].filter(x => x.id !== id);
+        selectedId = db[activeTab].length > 0 ? db[activeTab][0].id : null;
+        renderSidebar(); renderEditor();
+    }
+
+    function createNewEntity() {
+        let newId = "id-" + Date.now();
+        if (activeTab === 'heroes') {
+            db.heroes.push({ id: newId, nom: "Nouveau Héros", argent: 0, niv: 1, exp: 0, hp: 100, maxHp: 100, sp: 50, maxSp: 50, maxAp: 5, statsHorsCombat: { force: 5, agilite: 5, investigation: 5, social: 5, dexterite: 5, intuition: 5 }, expStats: { force: 0, agilite: 0, investigation: 0, social: 0, dexterite: 0, intuition: 0 }, equipement: { arme: "", veste: "", soulier: "", accessoire: "" }, masqueActif: "", attaques: [], passifsMagie: [] });
+        } else if (activeTab === 'masks') {
+            db.masks.push({ id: newId, nom: "Nouveau Masque", niv: 1, exp: 0, statsCombat: { forceCombat: 5, defense: 5, esquive: 5 }, bonusSocial: 0, elements: "", competences: [] });
+        } else if (activeTab === 'passives') {
+            db.passives.push({ id: newId, nom: "Nouvelle Compétence", type: "Passif", cout: 0, coutAp: 1, duree: "Permanent", desc: "", actionType: "pv", target: "single", power: 10 });
+        } else if (activeTab === 'equipments') {
+            db.equipments.push({ id: newId, nom: "Nouvel Équipement", type: "arme", stats: {}, passifLie: "" });
+        } else if (activeTab === 'items') {
+            let newOwnerId = db.heroes.length > 0 ? db.heroes[0].id : null;
+            if (selectedId) {
+                let currentItem = db.items.find(x => x.id === selectedId);
+                if (currentItem && currentItem.ownerId) newOwnerId = currentItem.ownerId;
+            }
+            db.items.push({ id: newId, ownerId: newOwnerId, nom: "Nouvel Objet", type: "pv", target: "single", power: 10, qty: 1, desc: "" });
+        } else if (activeTab === 'notes') {
+            db.notes.push({ id: newId, nom: "Nouvelle Note", folder: "Général", type: "text", content: "", excelData: [["", "", ""], ["", "", ""]] });
+        }
+        selectedId = newId; renderSidebar(); renderEditor();
+        updateTopBar();
+    }
+
+    function updateArrayField(tab, id, arrayName, index, field, value) { db[tab].find(x => x.id === id)[arrayName][index][field] = value; }
+    function addArrayItem(tab, id, arrayName) {
+        let item = db[tab].find(x => x.id === id);
+        if(!item[arrayName]) item[arrayName] = [];
+        if(arrayName === 'attaques') item.attaques.push({nom: "Nouvelle Action", type: "physique", degats: "0", des: "-", effet: "", contrecoup: "", desc: "", niv: 1, exp: 0});
+        else item.competences.push({nom: "Nouveau Sort", type: "Neutre", degats: "0", des: "-", effet: "", effetMasque: "", contrecoup: "", desc: "", niv: 1, exp: 0});
+        renderEditor();
+    }
+    function removeArrayItem(tab, id, arrayName, index) { db[tab].find(x => x.id === id)[arrayName].splice(index, 1); renderEditor(); }
+    
+    function toggleHeroPassive(heroId, passiveId, isChecked) {
+        let hero = db.heroes.find(h => h.id === heroId);
+        if(!hero.passifsMagie) hero.passifsMagie = [];
+        if(hero.maxAp === undefined) hero.maxAp = 5 + ((hero.niv || 1) - 1) * 2;
+
+        if(isChecked) { 
+            let usedAp = hero.passifsMagie.reduce((sum, pId) => {
+                let p = db.passives.find(x => x.id === pId);
+                return sum + (p ? (p.coutAp || 0) : 0);
+            }, 0);
+            let passiveToEquip = db.passives.find(p => p.id === passiveId);
+            let cost = passiveToEquip ? (passiveToEquip.coutAp || 0) : 0;
+            
+            if (usedAp + cost > hero.maxAp) {
+                triggerLog(`⚠️ AP Insuffisants pour l'équipement ! (Max: ${hero.maxAp})`);
+                renderEditor();
+                return;
+            }
+            if(!hero.passifsMagie.includes(passiveId)) hero.passifsMagie.push(passiveId); 
+        } 
+        else { 
+            hero.passifsMagie = hero.passifsMagie.filter(id => id !== passiveId); 
+        }
+        renderEditor();
+    }
+
+    function updateEqStat(stat, val) {
+        let item = db.equipments.find(x => x.id === selectedId);
+        if(!item.stats) item.stats = {};
+        item.stats[stat] = val;
+    }
+
+    function addStatExp(stat, sign, amountStr) {
+        let amount = parseInt(amountStr) || 0;
+        if (amount === 0) return;
+        
+        let hero = db.heroes.find(x => x.id === selectedId);
+        if (!hero.expStats) hero.expStats = { force: 0, agilite: 0, investigation: 0, social: 0, dexterite: 0, intuition: 0 };
+        hero.expStats[stat] = (hero.expStats[stat] || 0) + (amount * sign);
+        
+        while (hero.expStats[stat] >= 50) {
+            hero.expStats[stat] -= 50;
+            hero.statsHorsCombat[stat] = (Number(hero.statsHorsCombat[stat]) || 0) + 1;
+            triggerLog(`${stat.toUpperCase()} a augmenté !`);
+        }
+        while (hero.expStats[stat] < 0) {
+            if ((Number(hero.statsHorsCombat[stat]) || 0) > 0) {
+                hero.expStats[stat] += 50;
+                hero.statsHorsCombat[stat] = (Number(hero.statsHorsCombat[stat]) || 0) - 1;
+                triggerLog(`Correction : point de ${stat.toUpperCase()} annulé.`);
+            } else {
+                hero.expStats[stat] = 0;
+                break;
+            }
+        }
+        renderEditor();
+    }
+
+    // Fonctions globales pour le mode Excel des notes
+    window.updateExcelCell = function(id, r, c, val) {
+        let note = db.notes.find(x => x.id === id);
+        note.excelData[r][c] = val;
+    }
+    window.evalExcelCell = function(id, r, c, element) {
+        let val = element.value;
+        if(val.startsWith('=')) {
+            let note = db.notes.find(x => x.id === id);
+            let expression = val.substring(1).toUpperCase();
+            
+            expression = expression.replace(/([A-Z])([0-9]+)/g, function(match, colStr, rowStr) {
+                let col = colStr.charCodeAt(0) - 65;
+                let row = parseInt(rowStr) - 1; 
+                if(note.excelData[row] && note.excelData[row][col]) {
+                    let cellVal = note.excelData[row][col];
+                    return (parseFloat(cellVal) || 0);
+                }
+                return 0;
+            });
+
+            try {
+                let result = eval(expression);
+                if (!Number.isInteger(result)) result = parseFloat(result.toFixed(2));
+                element.value = result;
+                note.excelData[r][c] = result;
+            } catch(e) {
+                element.value = "ERREUR";
+            }
+        }
+    }
+    window.addExcelRow = function(id) {
+        let note = db.notes.find(x => x.id === id);
+        let cols = note.excelData[0] ? note.excelData[0].length : 3;
+        note.excelData.push(new Array(cols).fill(""));
+        renderEditor();
+    }
+    window.addExcelCol = function(id) {
+        let note = db.notes.find(x => x.id === id);
+        note.excelData.forEach(row => row.push(""));
+        renderEditor();
+    }
+    window.removeExcelRow = function(id, rIdx) {
+        let note = db.notes.find(x => x.id === id);
+        if(note.excelData.length > 1) {
+            note.excelData.splice(rIdx, 1);
+            renderEditor();
+        }
+    }
+    window.removeExcelCol = function(id) {
+        let note = db.notes.find(x => x.id === id);
+        if(note.excelData[0] && note.excelData[0].length > 1) {
+            note.excelData.forEach(row => row.pop());
+            renderEditor();
+        }
+    }
+
+    // Fonction spécifique pour modifier l'argent du héros de façon dynamique (Éditeur + Mode Jeu)
+    window.modifyHeroMoney = function(id, sign, inputId) {
+        let input = document.getElementById(inputId);
+        let val = parseFloat(input.value.replace(',', '.')) || 0;
+        if (val === 0) return;
+        
+        let hero = db.heroes.find(h => h.id === id);
+        hero.argent = parseFloat(hero.argent || 0);
+        hero.argent += val * sign;
+        if (hero.argent < 0) hero.argent = 0; 
+        hero.argent = parseFloat(hero.argent.toFixed(2));
+        
+        input.value = '';
+        triggerLog(sign > 0 ? `Ajout de $${val.toFixed(2)} à ${hero.nom}` : `Retrait de $${val.toFixed(2)} à ${hero.nom}`);
+        updateTopBar();
+        
+        if (activeTab === 'playmode') {
+            renderPlaymode();
+        } else {
+            renderEditor();
+        }
+    }
+    
+    // Fonction spécifique pour ajouter de l'EXP aux compétences manuellement dans l'éditeur
+    window.addExpToArrayItem = function(tab, id, arrayName, index, amountStr) {
+        let amount = parseInt(amountStr) || 0;
+        if(amount === 0) return;
+        let item = db[tab].find(x => x.id === id);
+        let skill = item[arrayName][index];
+        gainSkillExp(skill, amount);
+        renderEditor();
+    };
+
+    function renderEditor() {
+        const workspace = document.getElementById('editor-workspace');
+        if(!selectedId) { workspace.innerHTML = `<p style="color:#555; text-align:center;">Aucun élément à modifier.</p>`; return; }
+
+        const item = db[activeTab].find(x => x.id === selectedId);
+
+        if (activeTab === 'heroes') {
+            if(!item.attaques) item.attaques = [];
+            if(!item.passifsMagie) item.passifsMagie = [];
+            if(item.argent === undefined) item.argent = 0;
+            if(!item.expStats) item.expStats = { force: 0, agilite: 0, investigation: 0, social: 0, dexterite: 0, intuition: 0 };
+            let req = getExpReq(item.niv);
+            
+            let maxAp = item.maxAp !== undefined ? item.maxAp : 5 + ((item.niv||1)-1)*2;
+            let usedAp = item.passifsMagie.reduce((sum, pId) => {
+                let p = db.passives.find(x => x.id === pId);
+                return sum + (p ? (p.coutAp || 0) : 0);
+            }, 0);
+            
+            let htmlAttaques = item.attaques.map((atk, i) => `
+                <div class="editor-array-item">
+                    <button class="btn btn-danger btn-remove-array" onclick="removeArrayItem('heroes', '${item.id}', 'attaques', ${i})">X</button>
+                    <div class="flex-grid">
+                        <div class="col"><input type="text" value="${atk.nom}" onchange="updateArrayField('heroes', '${item.id}', 'attaques', ${i}, 'nom', this.value)" placeholder="Nom"></div>
+                        <div class="col"><input type="text" value="${atk.type}" onchange="updateArrayField('heroes', '${item.id}', 'attaques', ${i}, 'type', this.value)" placeholder="Type (Ex: arme)"></div>
+                    </div>
+                    <div class="flex-grid">
+                        <div class="col"><input type="text" value="${atk.degats}" onchange="updateArrayField('heroes', '${item.id}', 'attaques', ${i}, 'degats', this.value)" placeholder="Dégâts base"></div>
+                        <div class="col"><input type="text" value="${atk.des}" onchange="updateArrayField('heroes', '${item.id}', 'attaques', ${i}, 'des', this.value)" placeholder="Dé (Ex: D20)"></div>
+                    </div>
+                    <input type="text" value="${atk.effet}" onchange="updateArrayField('heroes', '${item.id}', 'attaques', ${i}, 'effet', this.value)" placeholder="Effet spécial (Optionnel)">
+                    <input type="text" value="${atk.contrecoup}" onchange="updateArrayField('heroes', '${item.id}', 'attaques', ${i}, 'contrecoup', this.value)" placeholder="Contrecoup (Optionnel)">
+                    <input type="text" value="${atk.desc}" onchange="updateArrayField('heroes', '${item.id}', 'attaques', ${i}, 'desc', this.value)" placeholder="Description narrative">
+                    <div class="flex-grid" style="margin-top: 8px; align-items: center; border-top: 1px dashed #333; padding-top: 8px;">
+                        <div class="col" style="color: #aaa; font-size: 0.85rem;">Niveau : ${atk.niv || 1} / 3 | EXP : ${atk.exp || 0} / 50</div>
+                        <div class="col" style="display: flex; gap: 5px; justify-content: flex-end;">
+                            <input type="number" id="hero-atk-exp-${i}" value="50" style="width: 60px; padding: 4px; background: #000; color: white; border: 1px solid #444;">
+                            <button class="btn btn-add" style="padding: 4px 10px; font-size: 0.85rem;" onclick="addExpToArrayItem('heroes', '${item.id}', 'attaques', ${i}, document.getElementById('hero-atk-exp-${i}').value)">+ EXP</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            workspace.innerHTML = `
+                <h3>Fiche de : ${item.nom}</h3>
+                <div class="flex-grid">
+                    <div class="col form-block"><label>Nom</label><input type="text" value="${item.nom}" oninput="updateField('nom', this.value)"></div>
+                    
+                    <div class="col form-block" style="border-color: var(--theme-yellow);">
+                        <label style="color:var(--theme-yellow);">Argent du personnage ($)</label>
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            <input type="number" step="0.01" value="${item.argent}" onchange="updateField('argent', this.value); updateTopBar();" style="flex:1;">
+                            <div style="display:flex; gap:2px;">
+                                <input type="text" id="editor-money-mod" style="width:70px; padding:5px; background:#111; color:white; border:1px solid #444;" placeholder="Ex: 5">
+                                <button class="btn btn-danger" onclick="modifyHeroMoney('${item.id}', -1, 'editor-money-mod')">-</button>
+                                <button class="btn btn-add" onclick="modifyHeroMoney('${item.id}', 1, 'editor-money-mod')">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-block">
+                    <label>Expérience Héros</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="number" id="custom-hero-exp" value="0" style="width:100px;">
+                        <button class="btn btn-add" onclick="injectHeroExp('${item.id}')">Injecter EXP</button>
+                    </div>
+                    <small style="color:#888;">Niveau : ${item.niv} | EXP: ${item.exp} / ${req}</small>
+                </div>
+                <div class="flex-grid">
+                    <div class="col form-block"><label>Niveau Fixe</label><input type="number" value="${item.niv}" oninput="updateField('niv', this.value)"></div>
+                    <div class="col form-block"><label>PV Max</label><input type="number" value="${item.maxHp}" oninput="updateField('maxHp', this.value)"></div>
+                    <div class="col form-block"><label>SM Max</label><input type="number" value="${item.maxSp}" oninput="updateField('maxSp', this.value)"></div>
+                    <div class="col form-block"><label>AP Max</label><input type="number" value="${maxAp}" oninput="updateField('maxAp', this.value)"></div>
+                </div>
+                
+                <h4 class="title-font" style="color:var(--theme-red); margin-bottom:5px;">Caractéristiques Hors-Combat</h4>
+                <div class="form-block">
+                    <div class="stats-exp-grid">
+                        ${['force', 'agilite', 'investigation', 'social', 'dexterite', 'intuition'].map(stat => `
+                            <div class="stats-exp-item">
+                                <div style="width:100%; display:flex; flex-direction:column; gap:4px;">
+                                    <span style="display:flex; justify-content:space-between; align-items:center;">
+                                        <strong>${stat.charAt(0).toUpperCase() + stat.slice(1)} :</strong> 
+                                        <input type="number" class="stat-direct-input" value="${item.statsHorsCombat[stat]}" onchange="updateNestedField('statsHorsCombat', '${stat}', this.value)">
+                                    </span>
+                                    <span style="display:flex; justify-content:space-between; align-items:center; font-size: 0.8rem; color: #aaa;">
+                                        <span>EXP stat: ${item.expStats[stat] || 0}</span>
+                                        <div style="display:flex; gap:4px; align-items:center;">
+                                            <input type="number" id="exp-in-${stat}" value="10" style="width:40px; padding:2px; background:#111; border:1px solid #444; color:white; text-align:center;">
+                                            <button class="btn btn-danger" style="padding:1px 6px; font-size:0.75rem;" onclick="addStatExp('${stat}', -1, document.getElementById('exp-in-${stat}').value)">-</button>
+                                            <button class="btn btn-add" style="padding:1px 6px; font-size:0.75rem;" onclick="addStatExp('${stat}', 1, document.getElementById('exp-in-${stat}').value)">+</button>
+                                        </div>
+                                    </span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="form-block">
+                    <h4 class="title-font" style="color:var(--theme-red); margin-top:0;">Attaques Physiques</h4>
+                    ${htmlAttaques}
+                    <button class="btn btn-add" style="width:100%;" onclick="addArrayItem('heroes', '${item.id}', 'attaques')">+ Ajouter une action</button>
+                </div>
+
+                <h4 class="title-font" style="color:var(--theme-yellow); margin-top:10px;">Passifs & Magies Appris (AP : ${usedAp} / ${maxAp})</h4>
+                <div class="form-block" style="display:flex; flex-wrap:wrap; gap:10px;">
+                    ${db.passives.map(p => `
+                        <label class="checkbox-label">
+                            <input type="checkbox" ${item.passifsMagie.includes(p.id) ? 'checked' : ''} onchange="toggleHeroPassive('${item.id}', '${p.id}', this.checked)"> 
+                            ${p.type === 'Passif' ? '🧿' : '✨'} ${p.nom} (AP: ${p.coutAp || 0})
+                        </label>
+                    `).join('') || '<span style="color:#666;">Aucune compétence globale créée dans l\'onglet Passifs & Magie.</span>'}
+                </div>
+
+                <div class="form-block"><label>Associer un Masque</label><select onchange="updateField('masqueActif', this.value)">${generateMaskOptions(item.masqueActif)}</select></div>
+                <h4 class="title-font" style="color:var(--theme-red);">Équipement Assigné</h4>
+                <div class="flex-grid">
+                    <div class="col"><label style="font-size:0.8rem;">Arme</label><select onchange="updateEquipment('arme', this.value)">${generateEqOptions('arme', item.equipement.arme)}</select></div>
+                    <div class="col"><label style="font-size:0.8rem;">Veste</label><select onchange="updateEquipment('veste', this.value)">${generateEqOptions('veste', item.equipement.veste)}</select></div>
+                    <div class="col"><label style="font-size:0.8rem;">Soulier</label><select onchange="updateEquipment('soulier', this.value)">${generateEqOptions('soulier', item.equipement.soulier)}</select></div>
+                    <div class="col"><label style="font-size:0.8rem;">Accessoire</label><select onchange="updateEquipment('accessoire', this.value)">${generateEqOptions('accessoire', item.equipement.accessoire)}</select></div>
+                </div>
+            `;
+        } 
+        else if (activeTab === 'masks') {
+            if(!item.competences) item.competences = [];
+            let req = getExpReq(item.niv);
+            let htmlMagie = item.competences.map((comp, i) => `
+                <div class="editor-array-item">
+                    <button class="btn btn-danger btn-remove-array" onclick="removeArrayItem('masks', '${item.id}', 'competences', ${i})">X</button>
+                    <div class="flex-grid">
+                        <div class="col"><input type="text" value="${comp.nom}" onchange="updateArrayField('masks', '${item.id}', 'competences', ${i}, 'nom', this.value)" placeholder="Nom du Sort"></div>
+                        <div class="col"><input type="text" value="${comp.type}" onchange="updateArrayField('masks', '${item.id}', 'competences', ${i}, 'type', this.value)" placeholder="Élément"></div>
+                    </div>
+                    <div class="flex-grid">
+                        <div class="col"><input type="text" value="${comp.degats}" onchange="updateArrayField('masks', '${item.id}', 'competences', ${i}, 'degats', this.value)" placeholder="Dégâts base"></div>
+                        <div class="col"><input type="text" value="${comp.des}" onchange="updateArrayField('masks', '${item.id}', 'competences', ${i}, 'des', this.value)" placeholder="Dé (Ex: D20)"></div>
+                    </div>
+                    <input type="text" value="${comp.effet}" onchange="updateArrayField('masks', '${item.id}', 'competences', ${i}, 'effet', this.value)" placeholder="Effet (Optionnel)">
+                    <input type="text" value="${comp.effetMasque}" onchange="updateArrayField('masks', '${item.id}', 'competences', ${i}, 'effetMasque', this.value)" placeholder="Avantage Masque Actif (Optionnel)">
+                    <input type="text" value="${comp.contrecoup}" onchange="updateArrayField('masks', '${item.id}', 'competences', ${i}, 'contrecoup', this.value)" placeholder="Contrecoup (Optionnel)">
+                    <input type="text" value="${comp.desc}" onchange="updateArrayField('masks', '${item.id}', 'competences', ${i}, 'desc', this.value)" placeholder="Description narrative">
+                    <div class="flex-grid" style="margin-top: 8px; align-items: center; border-top: 1px dashed #333; padding-top: 8px;">
+                        <div class="col" style="color: #aaa; font-size: 0.85rem;">Niveau : ${comp.niv || 1} / 3 | EXP : ${comp.exp || 0} / 50</div>
+                        <div class="col" style="display: flex; gap: 5px; justify-content: flex-end;">
+                            <input type="number" id="mask-mag-exp-${i}" value="50" style="width: 60px; padding: 4px; background: #000; color: white; border: 1px solid #444;">
+                            <button class="btn btn-add" style="padding: 4px 10px; font-size: 0.85rem; background: var(--theme-purple);" onclick="addExpToArrayItem('masks', '${item.id}', 'competences', ${i}, document.getElementById('mask-mag-exp-${i}').value)">+ EXP</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            workspace.innerHTML = `
+                <h3>Masque : ${item.nom}</h3>
+                <div class="form-block"><label>Nom</label><input type="text" value="${item.nom}" oninput="updateField('nom', this.value)"></div>
+                <div class="form-block">
+                    <label>Expérience Masque</label>
+                    <div style="display:flex; gap:10px;">
+                        <input type="number" id="custom-mask-exp" value="0" style="width:100px;">
+                        <button class="btn btn-add" onclick="injectMaskExp('${item.id}')">Injecter EXP</button>
+                    </div>
+                    <small style="color:#888;">Niveau : ${item.niv} | EXP: ${item.exp} / ${req}</small>
+                </div>
+                <div class="flex-grid">
+                    <div class="col form-block"><label>Force (Combat)</label><input type="number" value="${item.statsCombat.forceCombat}" oninput="updateNestedField('statsCombat', 'forceCombat', this.value)"></div>
+                    <div class="col form-block"><label>Défense</label><input type="number" value="${item.statsCombat.defense}" oninput="updateNestedField('statsCombat', 'defense', this.value)"></div>
+                    <div class="col form-block"><label>Esquive (Combat)</label><input type="number" value="${item.statsCombat.esquive}" oninput="updateNestedField('statsCombat', 'esquive', this.value)"></div>
+                </div>
+                <div class="form-block"><label>Bonus Stat Social Porteur</label><input type="number" value="${item.bonusSocial}" oninput="updateField('bonusSocial', this.value)"></div>
+                <div class="form-block"><label>Affinités Élémentaires Globales</label><input type="text" value="${item.elements}" oninput="updateField('elements', this.value)" placeholder="Ex: Feu: Absorb, Foudre: Faiblesse"></div>
+                
+                <div class="form-block">
+                    <h4 class="title-font" style="color:var(--theme-purple); margin-top:0;">Compétences Magiques du Masque</h4>
+                    ${htmlMagie}
+                    <button class="btn btn-add" style="width:100%; background:var(--theme-purple);" onclick="addArrayItem('masks', '${item.id}', 'competences')">+ Ajouter un sort</button>
+                </div>
+            `;
+        }
+        else if (activeTab === 'passives') {
+            workspace.innerHTML = `
+                <h3>Édition : Passif & Magie Globale</h3>
+                <div class="flex-grid">
+                    <div class="col form-block"><label>Nom de la compétence</label><input type="text" value="${item.nom}" oninput="updateField('nom', this.value)"></div>
+                    <div class="col form-block">
+                        <label>Catégorie</label>
+                        <select onchange="updateField('type', this.value)">
+                            <option value="Passif" ${item.type === 'Passif'?'selected':''}>🧿 Passif / Trait Automatique</option>
+                            <option value="Magie" ${item.type === 'Magie'?'selected':''}>✨ Magie (Sort Utilisable)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex-grid">
+                    <div class="col form-block"><label>Coût SM (Lancement)</label><input type="number" value="${item.cout}" oninput="updateField('cout', this.value)"></div>
+                    <div class="col form-block"><label>Coût AP (Équipement)</label><input type="number" value="${item.coutAp || 0}" oninput="updateField('coutAp', this.value)"></div>
+                    <div class="col form-block"><label>Durée (ex: 1 Scène)</label><input type="text" value="${item.duree}" oninput="updateField('duree', this.value)"></div>
+                </div>
+                <div class="form-block"><label>Description Narrative</label><textarea rows="3" oninput="updateField('desc', this.value)">${item.desc}</textarea></div>
+                
+                ${item.type === 'Magie' ? `
+                <div style="border:1px solid var(--theme-purple); padding:10px; background:#1a001a; margin-bottom:12px;">
+                    <h4 class="title-font" style="color:var(--theme-purple); margin-top:0;">Configuration de l'effet magique</h4>
+                    <div class="flex-grid">
+                        <div class="col">
+                            <label style="color:#aaa; font-size:0.8rem;">Type de Soin / Effet</label>
+                            <select onchange="updateField('actionType', this.value)">
+                                <option value="pv" ${item.actionType === 'pv'?'selected':''}>Soin PV</option>
+                                <option value="sm" ${item.actionType === 'sm'?'selected':''}>Soin SM</option>
+                                <option value="xyz" ${item.actionType === 'xyz'?'selected':''}>Guérison (Malus/XYZ)</option>
+                                <option value="revive" ${item.actionType === 'revive'?'selected':''}>Résurrection</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label style="color:#aaa; font-size:0.8rem;">Cible</label>
+                            <select onchange="updateField('target', this.value)">
+                                <option value="single" ${item.target === 'single'?'selected':''}>Personnage Actif</option>
+                                <option value="group" ${item.target === 'group'?'selected':''}>Tout le Groupe</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <label style="color:#aaa; font-size:0.8rem;">Puissance / Valeur / Nom du Malus</label>
+                            <input type="text" value="${item.power || 0}" oninput="updateField('power', this.value)">
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+        }
+        else if (activeTab === 'equipments') {
+            if(!item.stats) item.stats = {};
+            workspace.innerHTML = `
+                <h3>Édition Équipement</h3>
+                <div class="form-block"><label>Nom de la pièce</label><input type="text" value="${item.nom}" oninput="updateField('nom', this.value)"></div>
+                <div class="form-block">
+                    <label>Emplacement</label>
+                    <select onchange="updateField('type', this.value)">
+                        <option value="arme" ${item.type === 'arme'?'selected':''}>Arme (Dégâts)</option>
+                        <option value="veste" ${item.type === 'veste'?'selected':''}>Veste de Défense</option>
+                        <option value="soulier" ${item.type === 'soulier'?'selected':''}>Soulier d'Esquive</option>
+                        <option value="accessoire" ${item.type === 'accessoire'?'selected':''}>Accessoire Rare</option>
+                    </select>
+                </div>
+                
+                <h4 class="title-font" style="color:var(--theme-yellow);">Bonus de Statistiques (% ou Brut)</h4>
+                <div class="form-block">
+                    <label style="font-size:0.8rem; color:#aaa; margin-bottom:8px;">Laissez vide si aucun bonus. Exemple: "10" ou "10%".</label>
+                    <div class="flex-grid">
+                        <div class="col"><input type="text" placeholder="Max PV" value="${item.stats.pv || ''}" oninput="updateEqStat('pv', this.value)"></div>
+                        <div class="col"><input type="text" placeholder="Max SM" value="${item.stats.sm || ''}" oninput="updateEqStat('sm', this.value)"></div>
+                        <div class="col"><input type="text" placeholder="Force Base" value="${item.stats.force || ''}" oninput="updateEqStat('force', this.value)"></div>
+                        <div class="col"><input type="text" placeholder="Agilité Base" value="${item.stats.agilite || ''}" oninput="updateEqStat('agilite', this.value)"></div>
+                    </div>
+                    <div class="flex-grid">
+                        <div class="col"><input type="text" placeholder="Investigation" value="${item.stats.investigation || ''}" oninput="updateEqStat('investigation', this.value)"></div>
+                        <div class="col"><input type="text" placeholder="Social" value="${item.stats.social || ''}" oninput="updateEqStat('social', this.value)"></div>
+                        <div class="col"><input type="text" placeholder="Dextérité" value="${item.stats.dexterite || ''}" oninput="updateEqStat('dexterite', this.value)"></div>
+                        <div class="col"><input type="text" placeholder="Intuition" value="${item.stats.intuition || ''}" oninput="updateEqStat('intuition', this.value)"></div>
+                    </div>
+                    <div class="flex-grid">
+                        <div class="col"><input type="text" placeholder="Force Combat" value="${item.stats.forceCombat || ''}" oninput="updateEqStat('forceCombat', this.value)"></div>
+                        <div class="col"><input type="text" placeholder="Défense Combat" value="${item.stats.defense || ''}" oninput="updateEqStat('defense', this.value)"></div>
+                        <div class="col"><input type="text" placeholder="Esquive Combat" value="${item.stats.esquive || ''}" oninput="updateEqStat('esquive', this.value)"></div>
+                    </div>
+                </div>
+
+                <div class="form-block">
+                    <label>Lier un Passif ou Sort existant (S'ajoute automatiquement si équipé)</label>
+                    <select onchange="updateField('passifLie', this.value)">
+                        <option value="">-- Aucun --</option>
+                        ${db.passives.map(p => `<option value="${p.id}" ${item.passifLie === p.id ? 'selected' : ''}>${p.nom}</option>`).join('')}
+                    </select>
+                </div>
+            `;
+        }
+        else if (activeTab === 'items') {
+            if(!item.ownerId && db.heroes.length > 0) item.ownerId = db.heroes[0].id;
+            
+            workspace.innerHTML = `
+                <h3>Configuration de l'Objet</h3>
+                
+                <div class="form-block" style="border-color: var(--theme-purple);">
+                    <label style="color:var(--theme-purple);">Propriétaire de l'objet (Héros)</label>
+                    <select onchange="updateField('ownerId', this.value)">
+                        ${db.heroes.map(h => `<option value="${h.id}" ${item.ownerId === h.id ? 'selected' : ''}>${h.nom}</option>`).join('')}
+                    </select>
+                </div>
+
+                <div class="flex-grid">
+                    <div class="col form-block"><label>Nom</label><input type="text" value="${item.nom}" oninput="updateField('nom', this.value)"></div>
+                    <div class="col form-block"><label>Quantité en stock</label><input type="number" step="0.01" value="${item.qty}" oninput="updateField('qty', this.value)"></div>
+                </div>
+                <div class="flex-grid">
+                    <div class="col form-block">
+                        <label>Symbole & Effet (Type)</label>
+                        <select onchange="updateField('type', this.value)">
+                            <option value="pv" ${item.type === 'pv'?'selected':''}>PV - Rouge (Soin de Vie)</option>
+                            <option value="sm" ${item.type === 'sm'?'selected':''}>SM - Vert (Soin Mental)</option>
+                            <option value="frag" ${item.type === 'frag'?'selected':''}>Fragment de Masque (EXP)</option>
+                            <option value="xyz" ${item.type === 'xyz'?'selected':''}>XYZ - Mauve (Malus/Spécial)</option>
+                            <option value="key" ${item.type === 'key'?'selected':''}>Clé - Jaune (Quête)</option>
+                        </select>
+                    </div>
+                    <div class="col form-block">
+                        <label>Cible</label>
+                        <select onchange="updateField('target', this.value)">
+                            <option value="single" ${item.target === 'single'?'selected':''}>Une personne</option>
+                            <option value="group" ${item.target === 'group'?'selected':''}>Groupe entier</option>
+                            <option value="none" ${item.target === 'none'?'selected':''}>Aucune (Objet Clé)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-block">
+                    <label>Valeur (Soin, Montant d'EXP, ou texte d'effet)</label>
+                    <input type="text" value="${item.power}" oninput="updateField('power', this.value)">
+                </div>
+                <div class="form-block"><label>Description visible en jeu (Extensible)</label><textarea rows="4" oninput="updateField('desc', this.value)">${item.desc}</textarea></div>
+            `;
+        }
+        else if (activeTab === 'notes') {
+            let excelHtml = '';
+            if (item.type === 'excel') {
+                if (!item.excelData || !item.excelData[0]) item.excelData = [["", "", ""], ["", "", ""]];
+                
+                let numCols = item.excelData[0].length;
+                excelHtml = '<div class="form-block" style="overflow-x:auto;"><label>Tableau Excel (Supporte =A1+B2, =C1*10, etc.)</label>';
+                excelHtml += '<table style="width:100%; border-collapse: collapse; margin-bottom: 10px;">';
+                
+                // Entêtes de colonnes (A, B, C...)
+                excelHtml += '<tr><th style="width:30px; border:1px solid #444;"></th>';
+                for(let c=0; c<numCols; c++) {
+                    excelHtml += `<th style="border:1px solid #444; color:var(--theme-yellow); padding:4px;">${String.fromCharCode(65+c)}</th>`;
+                }
+                excelHtml += '<th style="border:1px solid #444;"></th></tr>';
+
+                item.excelData.forEach((row, rIdx) => {
+                    excelHtml += '<tr>';
+                    // Entête de rangée (1, 2, 3...)
+                    excelHtml += `<td style="border:1px solid #444; color:var(--theme-yellow); text-align:center; font-weight:bold;">${rIdx+1}</td>`;
+                    
+                    row.forEach((cell, cIdx) => {
+                        excelHtml += `<td style="border:1px solid #444; padding:2px;"><input type="text" style="width:100%; min-width:80px; border:none; background:transparent; color:white;" value="${cell}" oninput="updateExcelCell('${item.id}', ${rIdx}, ${cIdx}, this.value)" onblur="evalExcelCell('${item.id}', ${rIdx}, ${cIdx}, this)"></td>`;
+                    });
+                    excelHtml += `<td style="width:30px; text-align:center;"><button class="btn btn-danger" style="padding:2px 5px;" onclick="removeExcelRow('${item.id}', ${rIdx})">X</button></td>`;
+                    excelHtml += '</tr>';
+                });
+                excelHtml += '</table>';
+                excelHtml += `<div style="display:flex; gap:10px;">
+                                <button class="btn btn-add" onclick="addExcelRow('${item.id}')">+ Ligne</button>
+                                <button class="btn btn-add" onclick="addExcelCol('${item.id}')">+ Colonne</button>
+                                <button class="btn btn-danger" onclick="removeExcelCol('${item.id}')">- Colonne</button>
+                             </div></div>`;
+            }
+
+            workspace.innerHTML = `
+                <h3>Document de Notes</h3>
+                <div class="flex-grid">
+                    <div class="col form-block"><label>Nom du Document</label><input type="text" value="${item.nom}" oninput="updateField('nom', this.value)"></div>
+                    <div class="col form-block"><label>Dossier</label><input type="text" value="${item.folder}" oninput="updateField('folder', this.value)"></div>
+                </div>
+                <div class="form-block">
+                    <label>Format de la note</label>
+                    <select onchange="updateField('type', this.value); renderEditor();">
+                        <option value="text" ${item.type === 'text'?'selected':''}>Écriture Libre (Texte)</option>
+                        <option value="excel" ${item.type === 'excel'?'selected':''}>Format Tableau (Excel)</option>
+                    </select>
+                </div>
+                ${item.type === 'excel' ? excelHtml : `<div class="form-block"><label>Contenu de vos notes</label><textarea rows="15" oninput="updateField('content', this.value)">${item.content || ''}</textarea></div>`}
+            `;
+        }
+    }
+
+    function updateField(key, val) {
+        let item = db[activeTab].find(x => x.id === selectedId);
+        let numFields = ['qty', 'bonusSocial', 'cout', 'coutAp', 'niv', 'maxHp', 'maxSp', 'maxAp', 'hp', 'sp', 'exp', 'argent'];
+        if (numFields.includes(key)) {
+            item[key] = Number(String(val).replace(',', '.'));
+        } else {
+            item[key] = val;
+            if (key === 'power' && !isNaN(val) && val.trim() !== '') item[key] = Number(val);
+        }
+        if(key === 'nom' || key === 'type' || key === 'folder' || key === 'ownerId') renderSidebar();
+    }
+    
+    function updateNestedField(p, c, v) { db[activeTab].find(x => x.id === selectedId)[p][c] = Number(v); }
+    function updateEquipment(s, eqId) { db.heroes.find(x => x.id === selectedId).equipement[s] = eqId; }
+    function generateEqOptions(s, curr) { return `<option value="">-- Vide --</option>` + db.equipments.filter(e => e.type === s).map(e => `<option value="${e.id}" ${curr===e.id?'selected':''}>${e.nom}</option>`).join(''); }
+    function generateMaskOptions(curr) { return `<option value="">-- Aucun --</option>` + db.masks.map(m => `<option value="${m.id}" ${curr===m.id?'selected':''}>${m.nom}</option>`).join(''); }
+
+    function applyBonus(base, val) {
+        let b = Number(base) || 0;
+        if(!val) return b;
+        let str = String(val).trim();
+        let num = parseFloat(str);
+        if(isNaN(num)) return b;
+        if(str.endsWith('%')) return b + Math.floor(b * (num / 100));
+        return b + num;
+    }
+
+    function getInitials(passiveId) {
+        let owners = db.heroes.filter(h => 
+            (h.passifsMagie && h.passifsMagie.includes(passiveId)) || 
+            (h.equipement && [h.equipement.arme, h.equipement.veste, h.equipement.soulier, h.equipement.accessoire].some(eqId => {
+                let eq = db.equipments.find(e => e.id === eqId);
+                return eq && eq.passifLie === passiveId;
+            }))
+        );
+        if (owners.length === 0) return "";
+        return " [" + owners.map(o => o.nom.split(' ').map(n=>n[0]).join('')).join(', ') + "]";
+    }
+
+    function formatEqStats(eq) {
+        if(!eq || !eq.stats) return "Aucun effet";
+        let parts = [];
+        for(let k in eq.stats) {
+            if(eq.stats[k]) {
+                let label = k.charAt(0).toUpperCase() + k.slice(1);
+                if(k === 'forceCombat') label = "Force Cbt";
+                if(k === 'esquive') label = "Esquive Cbt";
+                parts.push(`${label}: +${eq.stats[k]}`);
+            }
+        }
+        if(eq.passifLie) {
+            let p = db.passives.find(x=>x.id===eq.passifLie);
+            if(p) parts.push(`Lien: ${p.nom}`);
+        }
+        return parts.length ? parts.join(' | ') : "Pas de stats";
+    }
+
+    function injectHeroExp(heroId) {
+        let amount = Number(document.getElementById('custom-hero-exp').value) || 0;
+        let hero = db.heroes.find(x => x.id === heroId);
+        hero.exp += amount;
+        while(hero.exp >= getExpReq(hero.niv)) { 
+            hero.exp -= getExpReq(hero.niv); 
+            hero.niv += 1; 
+            hero.maxHp += 15; 
+            hero.maxSp += 8; 
+            if(hero.maxAp === undefined) hero.maxAp = 5 + (hero.niv - 2) * 2;
+            hero.maxAp += 2;
+            triggerLog(`LEVEL UP ! ${hero.nom} passe niv ${hero.niv}`); 
+        }
+        renderEditor();
+    }
+    function injectMaskExp(maskId) {
+        let amount = Number(document.getElementById('custom-mask-exp').value) || 0;
+        let mask = db.masks.find(x => x.id === maskId);
+        injectMaskExpSystem(mask, amount);
+        renderEditor();
+    }
+
+    function injectMaskExpSystem(mask, amount) {
+        mask.exp += amount;
+        while(mask.exp >= getExpReq(mask.niv)) { 
+            mask.exp -= getExpReq(mask.niv); 
+            mask.niv++; 
+            mask.statsCombat.forceCombat += 2; 
+            mask.statsCombat.defense += 1; 
+            triggerLog(`LEVEL UP Masque : ${mask.nom} passe niv ${mask.niv}`); 
+        }
+    }
+
+    function gainSkillExp(skill, amount) {
+        if(skill.niv === undefined) skill.niv = 1;
+        if(skill.exp === undefined) skill.exp = 0;
+        if(skill.niv >= 3) return; 
+        
+        skill.exp += amount;
+        let req = getSkillExpReq(skill.niv);
+        while(skill.exp >= req && skill.niv < 3) {
+            skill.exp -= req;
+            skill.niv++;
+            req = getSkillExpReq(skill.niv);
+            triggerLog(`COMPÉTENCE AMÉLIORÉE ! ${skill.nom} passe Niv ${skill.niv}`);
+        }
+        if(skill.niv >= 3) skill.exp = 0;
+    }
+
+    function populatePlaymodeHeroSelect() {
+        const select = document.getElementById('playmode-hero-select');
+        select.innerHTML = db.heroes.map(h => `<option value="${h.id}">${h.nom}</option>`).join('');
+    }
+
+    function selectPlaymodeHero() { 
+        activeFragId = null; 
+        renderPlaymode(); 
+    }
+    
+    function renderPlaymode() {
+        const hId = document.getElementById('playmode-hero-select').value;
+        const dashboard = document.getElementById('playmode-dashboard');
+        if(!hId) return;
+
+        const hero = db.heroes.find(h => h.id === hId);
+        const mask = db.masks.find(m => m.id === hero.masqueActif);
+        const arme = db.equipments.find(e => e.id === hero.equipement.arme) || { nom: "Aucune", stats: {} };
+        const veste = db.equipments.find(e => e.id === hero.equipement.veste) || { nom: "Aucune", stats: {} };
+        const soulier = db.equipments.find(e => e.id === hero.equipement.soulier) || { nom: "Aucun", stats: {} };
+        const acc = db.equipments.find(e => e.id === hero.equipement.accessoire) || { nom: "Aucun", stats: {} };
+
+        let eqs = [arme, veste, soulier, acc];
+        let eqPassives = eqs.map(e => e.passifLie).filter(Boolean);
+
+        let finalMaxHp = Number(hero.maxHp) || 0;
+        let finalMaxSp = Number(hero.maxSp) || 0;
+        let finalMaxAp = hero.maxAp !== undefined ? hero.maxAp : 5 + ((hero.niv||1)-1)*2;
+        let finalForce = Number(hero.statsHorsCombat.force || 0);
+        let finalAgi = Number(hero.statsHorsCombat.agilite || 0);
+        let finalInv = Number(hero.statsHorsCombat.investigation || 0);
+        let finalSoc = Number(hero.statsHorsCombat.social || 0) + (mask ? Number(mask.bonusSocial || 0) : 0);
+        let finalDex = Number(hero.statsHorsCombat.dexterite || 0);
+        let finalInt = Number(hero.statsHorsCombat.intuition || 0);
+
+        let maskForce = mask ? Number(mask.statsCombat.forceCombat || 0) : 0;
+        let maskDef = mask ? Number(mask.statsCombat.defense || 0) : 0;
+        let maskEsq = mask ? Number(mask.statsCombat.esquive || 0) : 0;
+        
+        let usedAp = (hero.passifsMagie || []).reduce((sum, pId) => {
+            let p = db.passives.find(x => x.id === pId);
+            return sum + (p ? (p.coutAp || 0) : 0);
+        }, 0);
+
+        eqs.forEach(eq => {
+            if(!eq.stats) return;
+            finalMaxHp = applyBonus(finalMaxHp, eq.stats.pv);
+            finalMaxSp = applyBonus(finalMaxSp, eq.stats.sm);
+            finalForce = applyBonus(finalForce, eq.stats.force);
+            finalAgi = applyBonus(finalAgi, eq.stats.agilite);
+            finalInv = applyBonus(finalInv, eq.stats.investigation);
+            finalSoc = applyBonus(finalSoc, eq.stats.social);
+            finalDex = applyBonus(finalDex, eq.stats.dexterite);
+            finalInt = applyBonus(finalInt, eq.stats.intuition);
+            
+            maskForce = applyBonus(maskForce, eq.stats.forceCombat);
+            maskDef = applyBonus(maskDef, eq.stats.defense);
+            maskEsq = applyBonus(maskEsq, eq.stats.esquive);
+        });
+
+        let totalForceCombat = finalForce + maskForce;
+        let totalEsquive = finalAgi + maskEsq;
+
+        let heroItems = db.items.filter(item => item.ownerId === hero.id || (!item.ownerId && hero.id === db.heroes[0].id));
+
+        let invHtml = heroItems.map(item => {
+            let icon = "", action = "";
+            if(item.type === 'pv') icon = `<span class="icon-pv">[PV]</span>`;
+            else if(item.type === 'sm') icon = `<span class="icon-sm">[SM]</span>`;
+            else if(item.type === 'key') icon = `<span class="icon-key">[Clé]</span>`;
+            else if(item.type === 'frag') icon = `<span class="icon-xyz">🧩</span>`;
+            else if(item.type === 'xyz') icon = `<span class="icon-xyz">[XYZ]</span>`;
+            
+            if (item.qty > 0 || item.type === 'key') {
+                if(item.type === 'frag') {
+                    action = `<button class="btn btn-add" style="padding:2px 8px; font-size:0.8rem; background:var(--theme-purple);" onclick="activeFragId='${item.id}'; renderPlaymode();">Appliquer</button>`;
+                } else {
+                    action = `<button class="btn btn-add" style="padding:2px 8px; font-size:0.8rem;" onclick="useItem('${item.id}')">Utiliser</button>`;
+                }
+            } else {
+                action = `<span style="color:#666; font-size:0.8rem;">Épuisé</span>`;
+            }
+
+            let extraUI = '';
+            if (activeFragId === item.id) {
+                extraUI = `
+                    <div style="background:#0a0a0a; padding:10px; margin-top:5px; border:1px dashed var(--theme-purple);">
+                        <label style="color:#aaa; font-size:0.85rem; display:block; margin-bottom:5px;">Appliquer les ${item.power} EXP sur :</label>
+                        <select id="frag-target-${item.id}" style="margin-bottom:8px; width:100%;">
+                            ${mask ? `<option value="mask|${mask.id}">Tout le Masque (${mask.nom}) [Partagé équitablement]</option>` : ''}
+                            ${mask ? `
+                            <optgroup label="Magies du Masque">
+                                ${mask.competences.map((c,i) => `<option value="mag|${i}">${c.nom} (Niv. ${c.niv || 1})</option>`).join('')}
+                            </optgroup>` : '<option value="">Aucun masque équipé</option>'}
+                        </select>
+                        <div style="display:flex; gap:5px;">
+                            <button class="btn btn-add" style="flex:1; background:var(--theme-purple);" onclick="applyFragment('${item.id}')">Valider</button>
+                            <button class="btn btn-danger" onclick="activeFragId=null; renderPlaymode();">Annuler</button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            let qtyDisplay = `x${item.qty}`;
+            return `
+                <div class="inv-item" style="flex-direction:column; align-items:stretch;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            ${icon} <strong>${item.nom}</strong> <span style="color:#aaa; font-size:0.8rem;">${qtyDisplay}</span>
+                            <div style="font-size:0.75rem; color:#888; margin-top:2px;">${item.desc}</div>
+                        </div>
+                        <div>${action}</div>
+                    </div>
+                    ${extraUI}
+                </div>
+            `;
+        }).join('');
+
+        function renderSkill(skill, isHero) {
+            let n = skill.niv || 1;
+            let e = skill.exp || 0;
+            let maxN = n >= 3;
+            let req = maxN ? "MAX" : getSkillExpReq(n);
+            let pct = maxN ? 100 : (e / req) * 100;
+            
+            let bonus = (n - 1) * 2;
+            let bonusUI = bonus > 0 ? `<span style="color:var(--theme-green); font-size:0.9rem; font-weight:bold; margin-left:6px;">(+${bonus} Dégâts ou Effet)</span>` : '';
+
+            return `
+            <div class="skill-card ${isHero ? 'hero-skill' : 'mask-skill'}">
+                <div class="skill-header">
+                    <span class="skill-title">${skill.nom} <span class="skill-lvl-badge">Niv. ${n}</span></span>
+                    <span class="skill-type">[${skill.type}]</span>
+                </div>
+                <div class="skill-exp-bar"><div class="skill-exp-fill" style="width:${pct}%;"></div></div>
+                <div style="margin-top:4px;"><span class="skill-dmg-dice">Base : ${skill.degats} | Dé : ${skill.des}</span> ${bonusUI}</div>
+                ${skill.effet ? `<span class="skill-effect">Effet : ${skill.effet}</span>` : ''}
+                ${skill.effetMasque ? `<span class="skill-mask-active">Bonus (Masque) : ${skill.effetMasque}</span>` : ''}
+                ${skill.contrecoup ? `<span class="skill-contrecoup">Contrecoup : ${skill.contrecoup}</span>` : ''}
+                ${skill.desc ? `<span class="skill-desc">${skill.desc}</span>` : ''}
+            </div>`;
+        }
+
+        let htmlHeroSkills = (hero.attaques && hero.attaques.length > 0) 
+            ? hero.attaques.map(a => renderSkill(a, true)).join('') 
+            : '<p style="color:#666;">Aucune attaque configurée.</p>';
+
+        let htmlMaskSkills = (mask && mask.competences && mask.competences.length > 0) 
+            ? mask.competences.map(c => renderSkill(c, false)).join('') 
+            : '<p style="color:#666; font-style:italic;">Aucune compétence magique.</p>';
+
+        let combinedPassives = [...(hero.passifsMagie || []), ...eqPassives];
+        combinedPassives = [...new Set(combinedPassives)]; 
+
+        let htmlPassives = "";
+        if(combinedPassives.length > 0) {
+            htmlPassives = combinedPassives.map(pId => {
+                let p = db.passives.find(x => x.id === pId);
+                if(!p) return '';
+                let borderColor = p.type === 'Passif' ? 'var(--theme-yellow)' : 'var(--theme-purple)';
+                let initials = getInitials(p.id);
+                
+                let actionBtn = '';
+                if(p.type === 'Magie') {
+                    if(hero.sp >= p.cout) {
+                        actionBtn = `<button class="btn btn-add" style="background:var(--theme-purple); padding:4px 8px; font-size:0.8rem; margin-top:5px; width:100%;" onclick="useMagic('${hero.id}', '${p.id}')">Lancer Sort (-${p.cout} SM)</button>`;
+                    } else {
+                        actionBtn = `<button class="btn btn-danger" style="padding:4px 8px; font-size:0.8rem; margin-top:5px; width:100%; font-weight:bold;" onclick="useMagic('${hero.id}', '${p.id}', true)">Forcer Sort (Tomber à 0 SM !)</button>`;
+                    }
+                }
+
+                return `
+                    <div class="skill-card" style="border-left-color: ${borderColor};">
+                        <div class="skill-header">
+                            <span class="skill-title">${p.type === 'Passif' ? '🧿' : '✨'} ${p.nom} <span style="color:#888; font-size:0.85rem;">${initials}</span></span>
+                            <span class="skill-type">[${p.type}]</span>
+                        </div>
+                        <div style="font-size:0.85rem; color:#aaa; margin-bottom:4px;">
+                            <strong>Coût :</strong> <span style="color:var(--theme-red);">${p.cout} SM</span> | <strong>Durée :</strong> ${p.duree}
+                        </div>
+                        <span class="skill-effect" style="color:white;">${p.desc}</span>
+                        ${actionBtn}
+                    </div>
+                `;
+            }).join('');
+        } else {
+            htmlPassives = "<p style='color:#666; font-style:italic;'>Aucun passif ou magie assigné.</p>";
+        }
+
+        dashboard.innerHTML = `
+            <div class="ingame-box accent">
+                <h3>${hero.nom} (NIV. ${hero.niv})</h3>
+                <div style="margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; width:100%;">
+                        <strong>Points de Vie (PV) :</strong> <span>${hero.hp} / ${finalMaxHp}</span>
+                    </div>
+                    <div class="bar-container"><div class="bar-fill hp" style="width: ${(hero.hp/finalMaxHp)*100}%"></div></div>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; width:100%;">
+                        <strong>Santé Mentale (SM) :</strong> <span>${hero.sp} / ${finalMaxSp}</span>
+                    </div>
+                    <div class="bar-container"><div class="bar-fill sp" style="width: ${(hero.sp/finalMaxSp)*100}%"></div></div>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <div style="display:flex; justify-content:space-between; width:100%;">
+                        <strong>Points d'Action (AP) :</strong> <span>${usedAp} / ${finalMaxAp}</span>
+                    </div>
+                    <div class="bar-container"><div class="bar-fill" style="width: ${Math.min(100, (usedAp/finalMaxAp)*100)}%; background:var(--theme-blue);"></div></div>
+                </div>
+                
+                <div style="background:#111; padding:8px; display:flex; gap:10px; margin-top:10px; border:1px solid #333; align-items:center;">
+                    <input type="number" id="vital-input-${hero.id}" value="10" style="width:60px; text-align:center; padding:5px; background:#000; color:white; border:1px solid #444;">
+                    <div style="display:flex; gap: 5px;">
+                        <button class="btn" onclick="adjustVitalDynamic('${hero.id}', 'hp', -1, ${finalMaxHp})" style="color: #ff5252;">- PV</button>
+                        <button class="btn" onclick="adjustVitalDynamic('${hero.id}', 'hp', 1, ${finalMaxHp})" style="color: #ff5252;">+ PV</button>
+                        <button class="btn" onclick="adjustVitalDynamic('${hero.id}', 'sp', -1, ${finalMaxSp})" style="color: #69f0ae;">- SM</button>
+                        <button class="btn" onclick="adjustVitalDynamic('${hero.id}', 'sp', 1, ${finalMaxSp})" style="color: #69f0ae;">+ SM</button>
+                    </div>
+                </div>
+
+                <div style="background:#111; padding:8px; margin-top:10px; border:1px solid #333; border-left: 4px solid var(--theme-yellow);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="color:var(--theme-yellow);">Argent Personnel :</strong>
+                        <span style="color:var(--theme-yellow); font-family:'Anton', sans-serif; font-size:1.2rem;">$ ${parseFloat(hero.argent || 0).toFixed(2)}</span>
+                    </div>
+                    <div style="display:flex; gap:5px; margin-top:5px; align-items:center;">
+                        <input type="text" id="play-money-mod" style="flex:1; padding:5px; background:#000; color:white; border:1px solid #444;" placeholder="Montant (ex: 7.55)">
+                        <button class="btn btn-danger" onclick="modifyHeroMoney('${hero.id}', -1, 'play-money-mod')">-</button>
+                        <button class="btn btn-add" onclick="modifyHeroMoney('${hero.id}', 1, 'play-money-mod')">+</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ingame-box">
+                <h3>Statistiques d'Action (Équipement inclus)</h3>
+                <div class="game-stat-row"><span>Force</span><span class="game-stat-val">${finalForce}</span></div>
+                <div class="game-stat-row"><span>Agilité</span><span class="game-stat-val">${finalAgi}</span></div>
+                <div class="game-stat-row"><span>Investigation</span><span class="game-stat-val">${finalInv}</span></div>
+                <div class="game-stat-row"><span>Social</span><span class="game-stat-val" style="color:cyan;">${finalSoc}</span></div>
+                <div class="game-stat-row"><span>Dextérité</span><span class="game-stat-val">${finalDex}</span></div>
+                <div class="game-stat-row"><span>Intuition</span><span class="game-stat-val">${finalInt}</span></div>
+            </div>
+
+            <div class="ingame-box" style="grid-column: span 1;">
+                <h3 style="background-color: var(--theme-dark-red);">Actions Physiques (${hero.nom})</h3>
+                ${htmlHeroSkills}
+            </div>
+
+            <div class="ingame-box accent">
+                <h3 style="background-color: var(--theme-purple);">Stats de Combat : ${mask ? mask.nom : 'Aucun Masque'}</h3>
+                ${mask ? `
+                <div class="flex-grid" style="margin-bottom:10px;">
+                    <div class="col" style="background:#111; padding:5px; text-align:center;">
+                        <span style="font-size:0.8rem; color:#aaa; display:block;">Force Totale (Combat)</span>
+                        <strong style="color:var(--theme-yellow); font-size:1.2rem;">${totalForceCombat}</strong>
+                        <div style="font-size:0.7rem; color:#888; margin-top:3px;">(Sans masque: ${finalForce} | Avec: ${totalForceCombat})</div>
+                    </div>
+                    <div class="col" style="background:#111; padding:5px; text-align:center;">
+                        <span style="font-size:0.8rem; color:#aaa; display:block;">Défense</span>
+                        <strong style="color:var(--theme-yellow); font-size:1.2rem;">${maskDef}</strong>
+                        <div style="font-size:0.7rem; color:#888; margin-top:3px;">(Lié au masque)</div>
+                    </div>
+                    <div class="col" style="background:#111; padding:5px; text-align:center;">
+                        <span style="font-size:0.8rem; color:#aaa; display:block;">Esquive Totale</span>
+                        <strong style="color:var(--theme-yellow); font-size:1.2rem;">${totalEsquive}</strong>
+                        <div style="font-size:0.7rem; color:#888; margin-top:3px;">(Base Agi: ${finalAgi} + Masque: ${maskEsq})</div>
+                    </div>
+                </div>
+                ${htmlMaskSkills}
+                ` : `<p style="text-align:center; color:#666;">Pas de masque équipé.</p>`}
+            </div>
+
+            <div class="ingame-box" style="grid-column: span 1;">
+                <h3 style="background-color: var(--theme-gray); color: var(--theme-yellow);">Passifs & Magie Appris</h3>
+                ${htmlPassives}
+            </div>
+
+            <div class="ingame-box">
+                <h3>Arsenal & Équipements Portés</h3>
+                <p>⚔️ <strong>Arme :</strong> ${arme.nom} <br><small style="color:#aaa;">${formatEqStats(arme)}</small></p>
+                <p>🛡️ <strong>Veste :</strong> ${veste.nom} <br><small style="color:#aaa;">${formatEqStats(veste)}</small></p>
+                <p>🥾 <strong>Soulier :</strong> ${soulier.nom} <br><small style="color:#aaa;">${formatEqStats(soulier)}</small></p>
+                <p>💍 <strong>Accessoire :</strong> ${acc.nom} <br><small style="color:#aaa;">${formatEqStats(acc)}</small></p>
+            </div>
+
+            <div class="ingame-box" style="grid-column: span 2;">
+                <h3>Sac de ${hero.nom} (Inventaire)</h3>
+                <div class="inventory-list">
+                    ${invHtml || "<p style='color:#666; text-align:center;'>Sac vide.</p>"}
+                </div>
+            </div>
+        `;
+    }
+
+    function applyFragment(itemId) {
+        let item = db.items.find(i => i.id === itemId);
+        let targetVal = document.getElementById(`frag-target-${itemId}`).value;
+        let hero = db.heroes.find(h => h.id === document.getElementById('playmode-hero-select').value);
+        let mask = db.masks.find(m => m.id === hero.masqueActif);
+        
+        let amount = parseInt(item.power) || 0;
+        let [type, indexId] = targetVal.split('|');
+
+        if(type === 'mask') {
+            let numTargets = 1 + (mask.competences ? mask.competences.length : 0);
+            let share = Math.floor(amount / numTargets);
+            injectMaskExpSystem(mask, share);
+            if(mask.competences) {
+                mask.competences.forEach(c => gainSkillExp(c, share));
+            }
+            triggerLog(`Fragment utilisé: +${share} EXP au Masque et à tous ses sorts !`);
+        } else if (type === 'atk') {
+            let atk = hero.attaques[parseInt(indexId)];
+            gainSkillExp(atk, amount);
+            triggerLog(`Fragment utilisé: +${amount} EXP à ${atk.nom} !`);
+        } else if (type === 'mag') {
+            let mag = mask.competences[parseInt(indexId)];
+            gainSkillExp(mag, amount);
+            triggerLog(`Fragment utilisé: +${amount} EXP à ${mag.nom} !`);
+        }
+
+        item.qty--;
+        activeFragId = null;
+        renderPlaymode();
+    }
+
+    function useItem(itemId) {
+        let item = db.items.find(i => i.id === itemId);
+        if(item.type !== 'key' && item.qty <= 0) return;
+
+        let activeHeroId = document.getElementById('playmode-hero-select').value;
+        let activeHero = db.heroes.find(h => h.id === activeHeroId);
+        let amount = parseFloat(item.power) || 0;
+        let logMsg = `Utilisation de ${item.nom} : `;
+
+        if(item.type === 'pv' || item.type === 'sm') {
+            let prop = item.type === 'pv' ? 'hp' : 'sp';
+            let maxProp = item.type === 'pv' ? 'maxHp' : 'maxSp';
+            if(item.target === 'group') {
+                db.heroes.forEach(h => h[prop] = Math.min(h[maxProp], h[prop] + amount));
+                logMsg += `+${amount} ${item.type.toUpperCase()} pour tout le groupe.`;
+            } else if (item.target === 'single') {
+                activeHero[prop] = Math.min(activeHero[maxProp], activeHero[prop] + amount);
+                logMsg += `+${amount} ${item.type.toUpperCase()} pour ${activeHero.nom}.`;
+            }
+        } else if (item.type === 'xyz') { logMsg += `Effet appliqué : ${item.power}`; }
+        else if (item.type === 'key') { logMsg = `Objet Clé inspecté : ${item.nom}`; }
+
+        if(item.type !== 'key') { item.qty -= 1; }
+        triggerLog(logMsg);
+        renderPlaymode();
+    }
+
+    function useMagic(heroId, magicId, isForced = false) {
+        let hero = db.heroes.find(h => h.id === heroId);
+        let magic = db.passives.find(p => p.id === magicId);
+        
+        let cost = parseInt(magic.cout) || 0;
+        hero.sp = Math.max(0, hero.sp - cost);
+
+        let amount = parseFloat(magic.power) || 0;
+        let logMsg = `${hero.nom} lance ${magic.nom}${isForced ? " EN FORÇANT (SM à 0)" : ""} : `;
+
+        if(magic.actionType === 'pv' || magic.actionType === 'sm') {
+            let prop = magic.actionType === 'pv' ? 'hp' : 'sp';
+            let maxProp = magic.actionType === 'pv' ? 'maxHp' : 'maxSp';
+            if(magic.target === 'group') {
+                db.heroes.forEach(h => h[prop] = Math.min(h[maxProp], h[prop] + amount));
+                logMsg += `+${amount} ${magic.actionType.toUpperCase()} (Groupe).`;
+            } else {
+                hero[prop] = Math.min(hero[maxProp], hero[prop] + amount);
+                logMsg += `+${amount} ${magic.actionType.toUpperCase()} (${hero.nom}).`;
+            }
+        } else if (magic.actionType === 'xyz') {
+            logMsg += `Guérit : ${magic.power}`;
+        } else if (magic.actionType === 'revive') {
+            logMsg += `Résurrection !`;
+            if(magic.target === 'group') {
+                db.heroes.forEach(h => { if(h.hp === 0) h.hp = amount || 1; });
+            } else {
+                if(hero.hp === 0) hero.hp = amount || 1;
+            }
+        }
+
+        triggerLog(logMsg);
+        changeDusk(-1); 
+        renderPlaymode();
+    }
+
+    function adjustVitalDynamic(heroId, type, multiplier, computedMax = null) {
+        let amount = parseInt(document.getElementById(`vital-input-${heroId}`).value) || 0;
+        let hero = db.heroes.find(h => h.id === heroId);
+        let max = computedMax || (type === 'hp' ? hero.maxHp : hero.maxSp);
+        if(type === 'hp') hero.hp = Math.min(max, Math.max(0, hero.hp + (amount * multiplier)));
+        else hero.sp = Math.min(max, Math.max(0, hero.sp + (amount * multiplier)));
+        renderPlaymode();
+    }
+
+    function triggerLog(msg) {
+        let log = document.getElementById('log-panel');
+        log.innerText = msg;
+        log.style.display = 'block';
+        setTimeout(() => { log.style.display = 'none'; }, 4000);
+    }
+
+    function saveSystemData() {
+        let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 4));
+        let dlNode = document.createElement('a'); dlNode.setAttribute("href", dataStr); dlNode.setAttribute("download", "Campagne_Save.json"); document.body.appendChild(dlNode); dlNode.click(); dlNode.remove();
+        triggerLog("Fichier Téléchargé");
+    }
+
+    function saveSystemDataSophie() {
+        let jsonStr = JSON.stringify(db, null, 4);
+        let blob = new Blob([jsonStr], { type: "application/json" });
+        let url = URL.createObjectURL(blob);
+        let dlNode = document.createElement('a'); 
+        dlNode.setAttribute("href", url); 
+        dlNode.setAttribute("download", "Campagne_Save.json"); 
+        document.body.appendChild(dlNode); 
+        dlNode.click(); 
+        dlNode.remove(); 
+        URL.revokeObjectURL(url);
+        triggerLog("Fichier Téléchargé (iPad)");
+    }
+
+    function applyMigrations(parsed){
+        if(!(parsed && parsed.heroes && parsed.items)) return null;
+        parsed.items = parsed.items.filter(i => i.type !== 'money');
+        if(!parsed.systemState) parsed.systemState = { duskCounter: 10, duskMax: 10 };
+        if(!parsed.notes) parsed.notes = [];
+        parsed.heroes.forEach(h => {
+            if(h.argent === undefined) h.argent = 0;
+            if(h.maxAp === undefined) h.maxAp = 5 + ((h.niv || 1) - 1) * 2;
+            h.attaques && h.attaques.forEach(a => { if(!a.niv) a.niv=1; if(!a.exp) a.exp=0; })
+            if(!h.expStats) h.expStats = { force: 0, agilite: 0, investigation: 0, social: 0, dexterite: 0, intuition: 0 };
+        });
+        // Sécurité pour les anciens fichiers : assigner les objets au premier héros si aucun propriétaire n'est défini
+        parsed.items.forEach(i => {
+            if (!i.ownerId && parsed.heroes.length > 0) i.ownerId = parsed.heroes[0].id;
+        });
+        parsed.masks.forEach(m => m.competences && m.competences.forEach(c => { if(!c.niv) c.niv=1; if(!c.exp) c.exp=0; }));
+        parsed.passives.forEach(p => {
+            if(p.coutAp === undefined) p.coutAp = 0;
+        });
+        parsed.equipments.forEach(eq => { if(!eq.stats) eq.stats = {}; });
+        return parsed;
+    }
+
+    function loadSystemData(e) {
+        let file = e.target.files[0];
+        if(!file) return;
+        let reader = new FileReader();
+        reader.onload = function(evt) {
+            try {
+                let parsed = JSON.parse(evt.target.result);
+                const migrated = applyMigrations(parsed);
+                if(migrated){
+                    db = migrated;
+                    triggerLog("Données synchronisées !");
+                    updateTopBar();
+                    changeTab('playmode');
+                    scheduleSave();
+                }
+            } catch(err) { triggerLog("Erreur de chargement."); }
+        };
+        reader.readAsText(file);
+    }
+
+    async function loadFromCloud(){
+        try{
+            const res = await storage.get(STORAGE_KEY);
+            if(res && res.value){
+                const parsed = JSON.parse(res.value);
+                const migrated = applyMigrations(parsed);
+                if(migrated){ db = migrated; return true; }
+            }
+        }catch(e){ console.error('Chargement impossible', e); }
+        return false;
+    }
+
+    async function boot(){
+        await loadFromCloud();
+        updateTopBar();
+        renderSidebar(); renderEditor();
+    }
+
+    ['updateTopBar','renderSidebar','renderEditor','renderPlaymode'].forEach(fnName=>{
+        const original = window[fnName];
+        if(typeof original === 'function'){
+            window[fnName] = function(...args){
+                const result = original.apply(this, args);
+                scheduleSave();
+                return result;
+            };
+        }
+    });
+
+    function startApp(){
+        if(firestoreDb && typeof firebase.auth === 'function'){
+            const loginOverlay = document.getElementById('login-overlay');
+            let started = false;
+            firebase.auth().onAuthStateChanged(user=>{
+                if(user){
+                    loginOverlay.style.display = 'none';
+                    if(!started){ started = true; boot(); }
+                } else {
+                    loginOverlay.style.display = 'flex';
+                }
+            });
+            document.getElementById('login-submit').addEventListener('click', doLogin);
+            document.getElementById('login-password').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+            document.getElementById('login-email').addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); });
+            function doLogin(){
+                const email = document.getElementById('login-email').value.trim();
+                const pw = document.getElementById('login-password').value;
+                const errEl = document.getElementById('login-error');
+                errEl.textContent = '';
+                if(!email || !pw){ errEl.textContent = 'Courriel et mot de passe requis.'; return; }
+                firebase.auth().signInWithEmailAndPassword(email, pw).catch(err=>{
+                    errEl.textContent = 'Connexion refusée : courriel ou mot de passe incorrect.';
+                });
+            }
+        } else {
+            boot();
+        }
+    }
+    startApp();
+</script>
+
+</body>
+</html>

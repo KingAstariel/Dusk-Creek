@@ -90,6 +90,8 @@
 
         .item-card { background: var(--theme-gray); padding: 10px; cursor: pointer; font-weight: bold; border-left: 4px solid transparent; display: flex; justify-content: space-between; align-items: center; transform: skewX(-4deg); }
         .item-card:hover, .item-card.active { background: var(--theme-dark-red); border-left-color: var(--theme-red); }
+        .item-card[draggable="true"] { cursor: grab; }
+        .item-card[draggable="true"]:active { cursor: grabbing; }
 
         .folder-header { color: var(--theme-yellow); margin: 10px 0 5px 0; border-bottom: 1px solid #444; font-family: 'Anton', sans-serif; font-size: 1.1rem; }
 
@@ -278,7 +280,9 @@
     const storage = firestoreAdapter || (hasArtifactStorage ? window.storage : localAdapter);
 
     let saveTimer = null;
+    let autoSaveEnabled = false; // only flips true once we've confirmed the real cloud state (see boot())
     function scheduleSave(){
+      if(!autoSaveEnabled) return;
       clearTimeout(saveTimer);
       saveTimer = setTimeout(async ()=>{
         try{ await storage.set(STORAGE_KEY, JSON.stringify(db)); }
@@ -287,186 +291,20 @@
     }
 
     const DEFAULT_LVL_OBJ = { desc: "", degats: "", des: "", effet: "", effetMasque: "", contrecoup: "", elem1: "", colElem1: "#ffffff", elem2: "", colElem2: "#ffffff", cout: 0, useEssence: false, bonusLie: "" };
+    window.sortConfig = { items: 'manuel', passives: 'manuel', equipments: 'manuel' };
 
     let db = {
         systemState: {
-            duskCounter: 13,
-            duskMax: 15
+            duskCounter: 10,
+            duskMax: 10
         },
-        heroes: [
-            {
-                id: "h-1",
-                nom: "Ellis Monroe",
-                niv: 4,
-                exp: 81,
-                hp: 105,
-                maxHp: 215,
-                sp: 0,
-                maxSp: 69,
-                statsHorsCombat: { force: 20, agilite: 13, investigation: 19, social: 25, dexterite: 18, intuition: 10 },
-                expStats: { force: 38, agilite: 42, investigation: 28, social: 3, dexterite: 0, intuition: 12 },
-                equipement: { arme: "e-1", veste: "id-1789332213924", soulier: "id-1785302072348", accessoire: "id-1789174769225" },
-                masqueActif: "m-1",
-                passifsMagie: ["p-1", "id-1788810055289", "id-1789332360569", "atk-ellis-1", "atk-ellis-2", "atk-ellis-3", "atk-ellis-4"],
-                maxAp: 11,
-                argent: 4570
-            },
-            {
-                id: "id-1785350940779",
-                nom: "Lloyd Orion",
-                niv: 4,
-                exp: 91,
-                hp: 215,
-                maxHp: 210,
-                sp: 49,
-                maxSp: 79,
-                statsHorsCombat: { force: 26, agilite: 14, investigation: 17, social: 12, dexterite: 13, intuition: 11 },
-                expStats: { force: 10, agilite: 23, investigation: 21, social: 23, dexterite: 22, intuition: 27 },
-                equipement: { arme: "id-1785352770011", veste: "id-1785352844886", soulier: "id-1785352890154", accessoire: "id-1789271493368" },
-                masqueActif: "id-1785352426717",
-                passifsMagie: ["id-1785352166365", "id-1788760499407", "atk-lloyd-1", "atk-lloyd-2", "atk-lloyd-3"],
-                maxAp: 11,
-                argent: 3185.7
-            },
-            {
-                id: "id-1788561211812",
-                nom: "Melissa Tryckwi",
-                niv: 5,
-                exp: 0,
-                hp: 163,
-                maxHp: 228,
-                sp: 60,
-                maxSp: 87,
-                statsHorsCombat: { force: 8, agilite: 10, investigation: 6, social: 17, dexterite: 13, intuition: 14 },
-                expStats: { force: 16, agilite: 35, investigation: 18, social: 17, dexterite: 6, intuition: 0 },
-                equipement: { arme: "id-1788561751967", veste: "id-1788561876798", soulier: "id-1789271745039", accessoire: "" },
-                masqueActif: "id-1788561679392",
-                passifsMagie: ["p-mel-1", "p-mel-2", "p-atk-1", "p-atk-2", "p-atk-3", "p-atk-4"],
-                maxAp: 13,
-                argent: 17549.3
-            }
-        ],
-        masks: [
-            {
-                id: "m-1",
-                nom: "Le Masque Du Vice",
-                niv: 4,
-                exp: 76,
-                statsCombat: { forceCombat: 9, defense: 5, esquive: 5 },
-                bonusSocial: 3,
-                elements: "Poison / Lumière"
-            },
-            {
-                id: "id-1785352426717",
-                nom: "Le Masque Du Chasseur",
-                niv: 4,
-                exp: 76,
-                statsCombat: { forceCombat: 11, defense: 5, esquive: 3 },
-                bonusSocial: 0,
-                elements: "Ombre/Feu"
-            },
-            {
-                id: "id-1788561679392",
-                nom: "Masque de l'Hippocrate",
-                niv: 1,
-                exp: 0,
-                statsCombat: { forceCombat: 1, defense: 4, esquive: 4 },
-                bonusSocial: 2,
-                elements: ""
-            }
-        ],
-        passives: [
-            { id: "p-1", ownerId: "h-1", nom: "Échos Toxiques", type: "Passif", coutAp: 3, duree: "1 Scène", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "none", power: 0, 
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Chaque fois qu'Ellis s'injecte, la drogue réveille aussi des fragments du passé... (Si le Bracelet de sa mère est équiper le cout de SM est a 10)", cout: 20}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "id-1785352166365", ownerId: "id-1785350940779", nom: "Complice des Bêtes", type: "Passif", coutAp: 3, duree: "1 Scène", maxNiv: 3, niv: 1, exp: 0, actionType: "pv", target: "single", power: 10,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Le chien peut instantanément désamorcer la tension : calmer, faire fuir sans combat... une fois par scène.", cout: 0}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "id-1788760499407", ownerId: "id-1785350940779", nom: "Shadow's Dog", type: "Passif", coutAp: 0, duree: "Permanent", maxNiv: 3, niv: 1, exp: 0, actionType: "pv", target: "single", power: 10,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Rappel ton chien peut importe il est ou en 0.50 Secondes", cout: 15}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "id-1788810055289", ownerId: "h-1", nom: "The Wind of Virtue", type: "Magie", coutAp: 3, duree: "Scène/Combat", maxNiv: 3, niv: 1, exp: 0, actionType: "pv", target: "single", power: 10,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Utilise ceci quand tu es en manque ; leur infection augmentera ta barre de manque et remplacera une dose...", cout: 0}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "id-1789332360569", ownerId: "h-1", nom: "Monroe's charm", type: "Passif", coutAp: 0, duree: "Scène Social", maxNiv: 3, niv: 1, exp: 0, actionType: "pv", target: "single", power: 10,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Offre un bonus de 1D10 PTS lors de l'obtention d'un bonus de relation positif envers un personnage, mais double les points négatifs reçus.", cout: 0}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "atk-ellis-1", ownerId: "h-1", nom: "Crochet du Désespoir", type: "Normale", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Instinct de survie.", degats: "7", des: "D20"}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "atk-ellis-2", ownerId: "h-1", nom: "Matraque Réglementaire", type: "Normale", coutAp: 0, duree: "-", maxNiv: 3, niv: 2, exp: 48, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "La bonne option ?", degats: "13", des: "D10 (×2)", effet: "Si Masque Activé +15 Dégât"}, {...DEFAULT_LVL_OBJ, desc: "La bonne option ?", degats: "13", des: "D10 (×2)", effet: "Si Masque Activé +15 Dégât"}, {...DEFAULT_LVL_OBJ, desc: "La bonne option ?", degats: "13", des: "D10 (×2)", effet: "Si Masque Activé +15 Dégât"} ] },
-            { id: "atk-ellis-3", ownerId: "h-1", nom: "Réflexe du Fugitif", type: "Normale", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Rapide et sale.", degats: "6", des: "D8 (×2)"}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "atk-ellis-4", ownerId: "h-1", nom: "Injection de Secours", type: "Normale", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Bascule dangereuse.", effet: "+3 Dégâts Phys, +2 Agilité (2 tours).", contrecoup: "-20 SM, -2 Intuition."}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "atk-lloyd-1", ownerId: "id-1785350940779", nom: "Croc Du Meneur", type: "Normale", coutAp: 0, duree: "-", maxNiv: 3, niv: 3, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Une ou des morsures", degats: "15", des: "D20", effet: "Lance Un Dée De 20 Si le masque est Actif"}, {...DEFAULT_LVL_OBJ, desc: "Une ou des morsures", degats: "15", des: "D20", effet: "Lance Un Dée De 20 Si le masque est Actif"}, {...DEFAULT_LVL_OBJ, desc: "Une ou des morsures", degats: "15", des: "D20", effet: "Lance Un Dée De 20 Si le masque est Actif"} ] },
-            { id: "atk-lloyd-2", ownerId: "id-1785350940779", nom: "Griffades Croisées", type: "Normale", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Une rafale de coups de griffes rapprochés", degats: "7", des: "D8 (x2)", effet: "Lance Un Dée De 10 Si le masque est Actif"}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "atk-lloyd-3", ownerId: "id-1785350940779", nom: "Feinte du Meneur", type: "Normale", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Un déplacement fulgurant qui place Lloyd et son chien de part et d'autre de la cible avant de frapper en même temps.", degats: "8", des: "D10 (x2)"}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "msk-vice-1", ownerId: "m-1", nom: "Piqûre Corrompue", type: "Masque", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, degats: "6", des: "D10 (×2)", effet: "Empoisonné: 2 PV perdus / 2 tours.", effetMasque: "Dure 3 tours, 3 PV/tour."}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "msk-vice-2", ownerId: "m-1", nom: "Verdict du Juste", type: "Masque", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, degats: "8", des: "D20", effet: "Efficace vs Ombre.", effetMasque: "+2 dégâts fixes, soigne 3% PV lanceur."}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "msk-vice-3", ownerId: "m-1", nom: "Rédemption Fracturée", type: "Masque", coutAp: 0, duree: "-", maxNiv: 3, niv: 2, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, degats: "10", des: "D20 (×2) add", effet: "Double dégât.", effetMasque: "Annule -15 SM.", contrecoup: "-15 SM/utilisation."}, {...DEFAULT_LVL_OBJ, degats: "10", des: "D20 (×2) add", effet: "Double dégât.", effetMasque: "Annule -15 SM.", contrecoup: "-15 SM/utilisation."}, {...DEFAULT_LVL_OBJ, degats: "10", des: "D20 (×2) add", effet: "Double dégât.", effetMasque: "Annule -15 SM.", contrecoup: "-15 SM/utilisation."} ] },
-            { id: "msk-chas-1", ownerId: "id-1785352426717", nom: "Chaînes de Ténèbre", type: "Masque", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Des racines de ténèbre du sol et s'enroulent autour de la cible.", degats: "6", des: "D10 (x 2)", effetMasque: "La cible Panique pendant 2 tours 15PV de dégât et 15 SM"}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "msk-chas-2", ownerId: "id-1785352426717", nom: "Vague De Ténébreuse", type: "Masque", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, degats: "7", des: "D8 (x 2)", effet: "Peut Rendre fou sur la durée si c'est 10 et plus", effetMasque: "L'attaque touche toutes les cibles proches, pas seulement la principale."}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "msk-chas-3", ownerId: "id-1785352426717", nom: "Éclipse Du Territoire", type: "Masque", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "L'ombre du chien s'étend jusqu'à recouvrir entièrement la cible, un instant de nuit totale.", degats: "9", des: "D20", effet: "Si vous avez des alliers leur attaque +4", effetMasque: "+3 dégâts fixes supplémentaires (donc 12 de base avant le dé)."}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "p-mel-1", ownerId: "id-1788561211812", nom: "Diagnostic Froid", type: "Passif", coutAp: 3, duree: "1 Scène", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "none", power: 0, 
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Déformation professionnelle. Identifie immédiatement la pire faille anatomique de ses adversaires.", cout: 15}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "p-mel-2", ownerId: "id-1788561211812", nom: "Lueur Apaisante", type: "Magie", coutAp: 3, duree: "Instantané", maxNiv: 3, niv: 1, exp: 0, actionType: "pv", target: "single", power: 40,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Magie curative de base.", cout: 15}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "p-atk-1", ownerId: "id-1788561211812", nom: "Jab Clinique", type: "Normale", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Un coup de poing rapide.", degats: "5", des: "D20"}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "p-atk-2", ownerId: "id-1788561211812", nom: "Low Kick Punitif", type: "Normale", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Une frappe ciblée.", degats: "8", des: "D10 (×2)"}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "p-atk-3", ownerId: "id-1788561211812", nom: "Triage d'Urgence", type: "Normale", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Premiers soins.", effet: "Restaure 15 PV.", contrecoup: "-3 SM."}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "p-atk-4", ownerId: "id-1788561211812", nom: "Adrénaline Synthétique", type: "Normale", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, desc: "Boost chimique.", effet: "+3 Dex, +2 Esq.", contrecoup: "-2 SM/tour."}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "p-msk-1", ownerId: "id-1788561679392", nom: "Sève Nécrosée", type: "Masque", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, degats: "6", des: "D10 (×2)", effet: "Racines", effetMasque: "-2 Agi"}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "p-msk-2", ownerId: "id-1788561679392", nom: "Transfusion Forcée", type: "Masque", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, degats: "7", des: "D20", effet: "Draine", effetMasque: "Vole 4 PV"}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] },
-            { id: "p-msk-3", ownerId: "id-1788561679392", nom: "Le Remède Pire Que Le Mal", type: "Masque", coutAp: 0, duree: "-", maxNiv: 3, niv: 1, exp: 0, actionType: "none", target: "single", power: 0,
-              niveaux: [ {...DEFAULT_LVL_OBJ, degats: "4", des: "D20 (×2) add", effet: "Double dégât", effetMasque: "Empoisonne + Soigne", contrecoup: "-2 SM"}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ} ] }
-        ],
-        equipments: [
-            { id: "e-1", nom: "The Nightstick From My Former Life (Ellis)", type: "arme", stats: { forceCombat: "3", force: "" }, passifLie: "", ownerId: "h-1" },
-            { id: "id-1785301924702", nom: "The White Shirt That Makes Me Look Good (Ellis)", type: "veste", stats: { defense: "3", esquive: "1", agilite: "1" }, passifLie: "", ownerId: "h-1" },
-            { id: "id-1785302072348", nom: "The Thing I Walk With (Ellis)", type: "soulier", stats: { esquive: "3", dexterite: "1" }, passifLie: "", ownerId: "h-1" },
-            { id: "id-1785352770011", nom: "Dog Whistle Shadow (Lloyd)", type: "arme", stats: { social: "2", forceCombat: "6" }, passifLie: "id-1788760499407", ownerId: "id-1785350940779" },
-            { id: "id-1785352844886", nom: "Spring Coat (Lloyd)", type: "veste", stats: { defense: "2", pv: "5" }, passifLie: "", ownerId: "id-1785350940779" },
-            { id: "id-1785352890154", nom: "Hiking Boots (Lloyd)", type: "soulier", stats: { esquive: "2", dexterite: "2" }, passifLie: "", ownerId: "id-1785350940779" },
-            { id: "id-1788561751967", nom: "The Heavy-Duty Hand Wings", type: "arme", stats: { forceCombat: "1", dexterite: "2", intuition: "1" }, passifLie: "", ownerId: "id-1788561211812" },
-            { id: "id-1788561876798", nom: "The Paramedic Wingbreaker", type: "veste", stats: { social: "1", defense: "4", intuition: "1" }, passifLie: "", ownerId: "id-1788561211812" },
-            { id: "id-1788561974611", nom: "The Steal Toe Daily Boots", type: "soulier", stats: { defense: "2", dexterite: "1", esquive: "2" }, passifLie: "", ownerId: "id-1788561211812" },
-            { id: "id-1789174769225", nom: "The Thing that my mom did for me but never gave to me (Ellis)", type: "accessoire", stats: { intuition: "5", esquive: "5", sm: "10" }, passifLie: "", ownerId: "h-1" },
-            { id: "id-1789271493368", nom: "Porte Arme ", type: "accessoire", stats: { agilite: "5", dexterite: "5", esquive: "5" }, passifLie: "", ownerId: "id-1785350940779" },
-            { id: "id-1789271745039", nom: "Botte De Dance", type: "soulier", stats: { social: "3", dexterite: "", esquive: "4", agilite: "4" }, passifLie: "", ownerId: "id-1788561211812" },
-            { id: "id-1789332213924", nom: "The jacket that my father probably wore a couple of years ago", type: "veste", stats: { social: "3", defense: "5", esquive: "3", agilite: "4" }, passifLie: "id-1789332360569", ownerId: "h-1" }
-        ],
-        items: [
-            { id: "id-1785353011804", nom: "The Old Saloon Keys", type: "key", target: "none", power: "", qty: 1, desc: "Clé de votre domicile ", ownerId: "h-1", emoji: "🔑", couleur: "#ffeb3b" },
-            { id: "id-1785353147234", nom: "Old Logging Road Keys", type: "key", target: "single", power: "", qty: 1, desc: "Clé de votre domicile ", ownerId: "id-1785350940779", emoji: "🔑", couleur: "#ffeb3b" },
-            { id: "id-1788561774705", nom: "Clé De Maison", type: "key", target: "none", power: 10, qty: 1, desc: "", ownerId: "id-1788561211812", emoji: "🔑", couleur: "#ffeb3b" },
-            { id: "id-1788569705231", nom: "Appareil Photo", type: "key", target: "none", power: "", qty: 1, desc: "Appareil utilisé pour le prendre en photo alors qu'il était attaché. Faire développer le film par une personne de confiance.", ownerId: "id-1785350940779", emoji: "📸", couleur: "#ffffff" },
-            { id: "id-1788578746347", nom: "Caisse Outil", type: "key", target: "none", power: "", qty: 25, desc: "", ownerId: "id-1788561211812", emoji: "🧰", couleur: "#ffffff" },
-            { id: "id-1788578778498", nom: "Caisse Outil", type: "key", target: "none", power: "", qty: 23, desc: "", ownerId: "h-1", emoji: "🧰", couleur: "#ffffff" },
-            { id: "id-1788810916757", nom: "Valise D'argent", type: "key", target: "none", power: "", qty: 1, desc: "Contient argent et autre objet ", ownerId: "h-1", emoji: "💼", couleur: "#ffffff" },
-            { id: "id-1788995475020", nom: "Fiche De Personnage DnD", type: "key", target: "none", power: "", qty: 1, desc: "La fiche d'un personnage nommer Eltar Bethoford un Orc de Niv 4", ownerId: "h-1", emoji: "📜", couleur: "#ffffff" },
-            { id: "id-1788995618552", nom: "Potion De Soin", type: "pv", target: "single", power: 50, qty: 3, desc: "Fait avec des ingrédients maison, mais elle soigne. ", ownerId: "h-1", emoji: "🧪", couleur: "#D91A2A" },
-            { id: "id-1788996054080", nom: "Anti Dépresseur", type: "sm", target: "single", power: 50, qty: 20, desc: "A consommer avec modération une fois par jour aux souper, avec de la nourriture. (21 Novembre) ", ownerId: "h-1", emoji: "💊", couleur: "#4CAF50" },
-            { id: "id-1789251984714", nom: "Pomme", type: "xyz", target: "single", power: "", qty: 12, desc: "En manger une boost ta barre de manque et te redonne 75 PTS", ownerId: "h-1", emoji: "🍎", couleur: "#D91A2A" },
-            { id: "id-1789271643929", nom: "Cœur Du Chupacabra", type: "key", target: "none", power: "", qty: 1, desc: "Le cœur du Chupacabra... je pourrais le manger ", ownerId: "id-1785350940779", emoji: "❤️", couleur: "#D91A2A" },
-            { id: "id-1789344328142", nom: "Venin De Scorpion ", type: "key", target: "none", power: "", qty: 1, desc: "Venin de scorpion qui était dans la bouche d'Elyias Vance... Le venin a résisté au feu et à la chaleur...", ownerId: "id-1785350940779", emoji: "🩸", couleur: "#9C27B0" }
-        ],
-        notes: [
-            { id: "id-1788570718231", nom: "Combat ", folder: "Général", type: "text", content: "Crée le system de défense aussi pour qu'il est une nuance. ", excelData: [["", "", ""], ["", "", ""]] }
-        ],
-        bonuses: [
-            { id: "b-1", ownerId: "h-1", nom: "Burger", effets: [{cible: "pv", valeur: "10"}], actif: false }
-        ]
+        heroes: [],
+        masks: [],
+        passives: [],
+        equipments: [],
+        items: [],
+        notes: [],
+        bonuses: []
     };
 
     const EMOJI_LIST = [
@@ -488,7 +326,7 @@
 
     function updateTopBar() {
         document.getElementById('dusk-display').innerText = `${db.systemState.duskCounter}/${db.systemState.duskMax}`;
-        let total = db.heroes.reduce((sum, h) => sum + parseFloat(h.argent || 0), 0);
+        let total = db.heroes.reduce((sum, h) => sum + parseFloat(h.argentComptant || 0) + parseFloat(h.compteBancaire || 0), 0);
         let display = document.getElementById('total-money-display');
         if(display) display.innerText = total.toFixed(2);
     }
@@ -557,6 +395,23 @@
         addBtn.onclick = createNewEntity;
         sidebar.appendChild(addBtn);
 
+        let sType = 'manuel';
+        if (activeTab === 'items' || activeTab === 'passives' || activeTab === 'equipments') {
+            let sortDiv = document.createElement('div');
+            sortDiv.style.marginBottom = "10px";
+            sortDiv.innerHTML = `
+                <select style="width:100%; padding:5px; background:var(--theme-gray); color:white; border:1px solid var(--theme-light-gray); font-family: 'Anton', sans-serif;" onchange="window.sortConfig['${activeTab}'] = this.value; renderSidebar();">
+                    <option value="manuel" ${window.sortConfig[activeTab]==='manuel'?'selected':''}>Tri: Manuel / Base</option>
+                    <option value="abc" ${window.sortConfig[activeTab]==='abc'?'selected':''}>Tri: Alphabétique (ABC)</option>
+                    <option value="type" ${window.sortConfig[activeTab]==='type'?'selected':''}>Tri: Type</option>
+                    <option value="force" ${window.sortConfig[activeTab]==='force'?'selected':''}>Tri: Force/Puissance</option>
+                    <option value="couleur" ${window.sortConfig[activeTab]==='couleur'?'selected':''}>Tri: Couleur</option>
+                </select>
+            `;
+            sidebar.appendChild(sortDiv);
+            sType = window.sortConfig[activeTab] || 'manuel';
+        }
+
         if (activeTab === 'items' || activeTab === 'passives' || activeTab === 'equipments' || activeTab === 'bonuses') {
             let owners = [...db.heroes];
             if(activeTab === 'passives') owners = [...owners, ...db.masks];
@@ -579,41 +434,94 @@
                 if (isExpanded) {
                     let items = db[activeTab].filter(item => item.ownerId === owner.id || (!item.ownerId && owner.id === db.heroes[0].id));
                     
+                    if(sType !== 'manuel') {
+                        items.sort((a, b) => {
+                            if(sType === 'abc') return (a.nom||'').localeCompare(b.nom||'');
+                            if(sType === 'type') return (a.type||'').localeCompare(b.type||'');
+                            if(sType === 'force') {
+                                let vA = parseFloat(a.power) || parseFloat(a.stats?.force) || parseFloat(a.stats?.forceCombat) || 0;
+                                let vB = parseFloat(b.power) || parseFloat(b.stats?.force) || parseFloat(b.stats?.forceCombat) || 0;
+                                return vB - vA;
+                            }
+                            if(sType === 'couleur') return (a.couleur||'').localeCompare(b.couleur||'');
+                            return 0;
+                        });
+                    }
+
+                    let folders = {};
                     items.forEach(item => {
-                        let card = document.createElement('div');
-                        card.className = `item-card ${item.id === selectedId ? 'active' : ''}`;
-                        
-                        let prefix = "";
-                        let colorStyle = "";
-                        
-                        if(activeTab === 'items') {
-                            prefix = item.emoji ? item.emoji + " " : "";
-                            colorStyle = item.couleur ? `color: ${item.couleur};` : "";
-                            card.innerHTML = `<span style="${colorStyle}">${prefix}${item.nom || 'Sans nom'} (x${item.qty})</span>`;
-                        } else if (activeTab === 'passives') {
-                            if(item.type === 'Normale') prefix = "👤 ";
-                            else if(item.type === 'Masque') prefix = "🎭 ";
-                            else if(item.type === 'Passif') prefix = "🔹 ";
-                            else if(item.type === 'Magie') prefix = "✨ ";
-                            
-                            let nameColor = item.type === 'Normale' ? 'white' : (item.type === 'Masque' ? 'var(--theme-yellow)' : (item.type === 'Passif' ? 'var(--theme-sapphire)' : 'var(--theme-purple)'));
-                            card.innerHTML = `<span style="color:${nameColor};">${prefix}${item.nom || 'Sans nom'}</span>`;
-                        } else if (activeTab === 'bonuses') {
-                            prefix = item.actif ? "🟢 " : "🔴 ";
-                            card.innerHTML = `<span>${prefix}${item.nom || 'Bonus'}</span>`;
-                        } else {
-                            card.innerHTML = `<span>${item.nom || 'Sans nom'}</span>`;
-                        }
-                        
-                        let delBtn = document.createElement('button');
-                        delBtn.className = "btn-danger";
-                        delBtn.innerText = "X";
-                        delBtn.onclick = (e) => { e.stopPropagation(); deleteEntity(item.id); };
-                        
-                        card.appendChild(delBtn);
-                        card.onclick = () => { selectedId = item.id; renderSidebar(); renderEditor(); };
-                        sidebar.appendChild(card);
+                        let d = item.dossier || "Général";
+                        if(!folders[d]) folders[d] = [];
+                        folders[d].push(item);
                     });
+
+                    for (let d in folders) {
+                        if (d !== 'Général') {
+                            let subFDiv = document.createElement('div');
+                            subFDiv.className = "folder-header";
+                            subFDiv.style.fontSize = "0.9rem";
+                            subFDiv.style.marginLeft = "10px";
+                            subFDiv.style.color = "var(--theme-sapphire)";
+                            subFDiv.innerText = `📂 ${d}`;
+                            sidebar.appendChild(subFDiv);
+                        }
+
+                        folders[d].forEach(item => {
+                            let card = document.createElement('div');
+                            card.className = `item-card ${item.id === selectedId ? 'active' : ''}`;
+                            
+                            if (sType === 'manuel') {
+                                card.draggable = true;
+                                card.ondragstart = (e) => { e.dataTransfer.setData('text/plain', item.id); };
+                                card.ondragover = (e) => { e.preventDefault(); };
+                                card.ondrop = (e) => {
+                                    e.preventDefault();
+                                    let draggedId = e.dataTransfer.getData('text/plain');
+                                    if (draggedId && draggedId !== item.id) {
+                                        let arr = db[activeTab];
+                                        let fromIdx = arr.findIndex(x => x.id === draggedId);
+                                        let toIdx = arr.findIndex(x => x.id === item.id);
+                                        if (fromIdx > -1 && toIdx > -1) {
+                                            let [moved] = arr.splice(fromIdx, 1);
+                                            arr.splice(toIdx, 0, moved);
+                                            renderSidebar();
+                                        }
+                                    }
+                                };
+                            }
+                            
+                            let prefix = "";
+                            let colorStyle = "";
+                            
+                            if(activeTab === 'items') {
+                                prefix = item.emoji ? item.emoji + " " : "";
+                                colorStyle = item.couleur ? `color: ${item.couleur};` : "";
+                                card.innerHTML = `<span style="${colorStyle}">${prefix}${item.nom || 'Sans nom'} (x${item.qty})</span>`;
+                            } else if (activeTab === 'passives') {
+                                if(item.type === 'Normale') prefix = "👤 ";
+                                else if(item.type === 'Masque') prefix = "🎭 ";
+                                else if(item.type === 'Passif') prefix = "🔹 ";
+                                else if(item.type === 'Magie') prefix = "✨ ";
+                                
+                                let nameColor = item.type === 'Normale' ? 'white' : (item.type === 'Masque' ? 'var(--theme-yellow)' : (item.type === 'Passif' ? 'var(--theme-sapphire)' : 'var(--theme-purple)'));
+                                card.innerHTML = `<span style="color:${nameColor};">${prefix}${item.nom || 'Sans nom'}</span>`;
+                            } else if (activeTab === 'bonuses') {
+                                prefix = item.actif ? "🟢 " : "🔴 ";
+                                card.innerHTML = `<span>${prefix}${item.nom || 'Bonus'}</span>`;
+                            } else {
+                                card.innerHTML = `<span>${item.nom || 'Sans nom'}</span>`;
+                            }
+                            
+                            let delBtn = document.createElement('button');
+                            delBtn.className = "btn-danger";
+                            delBtn.innerText = "X";
+                            delBtn.onclick = (e) => { e.stopPropagation(); deleteEntity(item.id); };
+                            
+                            card.appendChild(delBtn);
+                            card.onclick = () => { selectedId = item.id; renderSidebar(); renderEditor(); };
+                            sidebar.appendChild(card);
+                        });
+                    }
                 }
             });
         }
@@ -672,26 +580,26 @@
     function createNewEntity() {
         let newId = "id-" + Date.now();
         if (activeTab === 'heroes') {
-            db.heroes.push({ id: newId, nom: "Nouveau Héros", argent: 0, niv: 1, exp: 0, hp: 100, maxHp: 100, sp: 50, maxSp: 50, maxAp: 5, statsHorsCombat: { force: 5, agilite: 5, investigation: 5, social: 5, dexterite: 5, intuition: 5 }, expStats: { force: 0, agilite: 0, investigation: 0, social: 0, dexterite: 0, intuition: 0 }, equipement: { arme: "", veste: "", soulier: "", accessoire: "" }, masqueActif: "", passifsMagie: [] });
+            db.heroes.push({ id: newId, nom: "Nouveau Héros", argentComptant: 0, compteBancaire: 0, niv: 1, exp: 0, hp: 100, maxHp: 100, sp: 50, maxSp: 50, maxAp: 5, statsHorsCombat: { force: 5, agilite: 5, investigation: 5, social: 5, dexterite: 5, intuition: 5 }, expStats: { force: 0, agilite: 0, investigation: 0, social: 0, dexterite: 0, intuition: 0 }, equipement: { arme: "", veste: "", soulier: "", accessoire: "" }, masqueActif: "", passifsMagie: [] });
         } else if (activeTab === 'masks') {
             db.masks.push({ id: newId, nom: "Nouveau Masque", niv: 1, exp: 0, statsCombat: { forceCombat: 5, defense: 5, esquive: 5 }, bonusSocial: 0, elements: "" });
         } else if (activeTab === 'passives') {
             let newOwnerId = db.heroes.length > 0 ? db.heroes[0].id : null;
             db.passives.push({ 
                 id: newId, ownerId: newOwnerId, nom: "Nouvelle Compétence", type: "Normale", coutAp: 1, duree: "-",
-                actionType: "none", target: "single", power: 10, maxNiv: 3, niv: 1, exp: 0, 
+                actionType: "none", target: "single", power: 10, maxNiv: 3, niv: 1, exp: 0, dossier: "",
                 niveaux: [{...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ}] 
             });
         } else if (activeTab === 'equipments') {
             let newOwnerId = db.heroes.length > 0 ? db.heroes[0].id : null;
-            db.equipments.push({ id: newId, ownerId: newOwnerId, nom: "Nouvel Équipement", type: "arme", stats: {}, passifLie: "" });
+            db.equipments.push({ id: newId, ownerId: newOwnerId, nom: "Nouvel Équipement", type: "arme", stats: {}, passifLie: "", dossier: "" });
         } else if (activeTab === 'items') {
             let newOwnerId = db.heroes.length > 0 ? db.heroes[0].id : null;
             if (selectedId) {
                 let currentItem = db.items.find(x => x.id === selectedId);
                 if (currentItem && currentItem.ownerId) newOwnerId = currentItem.ownerId;
             }
-            db.items.push({ id: newId, ownerId: newOwnerId, nom: "Nouvel Objet", type: "pv", target: "single", power: 10, qty: 1, desc: "", emoji: "🍎", couleur: "#ffffff" });
+            db.items.push({ id: newId, ownerId: newOwnerId, nom: "Nouvel Objet", type: "pv", target: "single", power: 10, qty: 1, desc: "", emoji: "🍎", couleur: "#ffffff", dossier: "" });
         } else if (activeTab === 'bonuses') {
             let newOwnerId = db.heroes.length > 0 ? db.heroes[0].id : null;
             db.bonuses.push({ id: newId, ownerId: newOwnerId, nom: "Nouveau Bonus", effets: [{ cible: "force", valeur: "2" }], actif: false });
@@ -817,19 +725,19 @@
         }
     }
 
-    window.modifyHeroMoney = function(id, sign, inputId) {
+    window.modifyHeroMoney = function(id, sign, inputId, field = 'argentComptant') {
         let input = document.getElementById(inputId);
         let val = parseFloat(input.value.replace(',', '.')) || 0;
         input.value = ''; 
         if (val === 0) return;
         
         let hero = db.heroes.find(h => h.id === id);
-        hero.argent = parseFloat(hero.argent || 0);
-        hero.argent += val * sign;
-        if (hero.argent < 0) hero.argent = 0; 
-        hero.argent = parseFloat(hero.argent.toFixed(2));
+        hero[field] = parseFloat(hero[field] || 0);
+        hero[field] += val * sign;
+        if (hero[field] < 0) hero[field] = 0; 
+        hero[field] = parseFloat(hero[field].toFixed(2));
         
-        triggerLog(sign > 0 ? `Ajout de $${val.toFixed(2)} à ${hero.nom}` : `Retrait de $${val.toFixed(2)} à ${hero.nom}`);
+        triggerLog(sign > 0 ? `Ajout de $${val.toFixed(2)} à ${hero.nom} (${field})` : `Retrait de $${val.toFixed(2)} à ${hero.nom} (${field})`);
         updateTopBar();
         
         if (activeTab === 'playmode') {
@@ -853,7 +761,7 @@
         let newId = "p-" + Date.now();
         db.passives.push({ 
             id: newId, ownerId: eq.ownerId, nom: "Passif de " + eq.nom, 
-            type: "Passif", coutAp: 0, duree: "Permanent", maxNiv: 3, niv: 1, exp: 0, 
+            type: "Passif", coutAp: 0, duree: "Permanent", maxNiv: 3, niv: 1, exp: 0, dossier: eq.dossier || "",
             niveaux: [{...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ}, {...DEFAULT_LVL_OBJ}] 
         });
         eq.passifLie = newId;
@@ -943,7 +851,8 @@
 
         if (activeTab === 'heroes') {
             if(!item.passifsMagie) item.passifsMagie = [];
-            if(item.argent === undefined) item.argent = 0;
+            if(item.argentComptant === undefined) item.argentComptant = item.argent || 0;
+            if(item.compteBancaire === undefined) item.compteBancaire = 0;
             if(!item.expStats) item.expStats = { force: 0, agilite: 0, investigation: 0, social: 0, dexterite: 0, intuition: 0 };
             let req = getExpReq(item.niv);
             
@@ -959,17 +868,28 @@
 
             workspace.innerHTML = `
                 <h3>Fiche de : ${item.nom}</h3>
+                <div class="form-block"><label>Nom</label><input type="text" value="${item.nom}" oninput="updateField('nom', this.value)"></div>
+                
                 <div class="flex-grid">
-                    <div class="col form-block"><label>Nom</label><input type="text" value="${item.nom}" oninput="updateField('nom', this.value)"></div>
-                    
                     <div class="col form-block" style="border-color: var(--theme-yellow);">
-                        <label style="color:var(--theme-yellow);">Argent du personnage ($)</label>
+                        <label style="color:var(--theme-yellow);">Argent Comptant ($)</label>
                         <div style="display:flex; gap:5px; align-items:center;">
-                            <input type="number" step="0.01" value="${item.argent}" onchange="updateField('argent', this.value); updateTopBar();" style="flex:1;">
+                            <input type="number" step="0.01" value="${item.argentComptant}" onchange="updateField('argentComptant', this.value); updateTopBar();" style="flex:1;">
                             <div style="display:flex; gap:2px;">
-                                <input type="text" id="editor-money-mod" style="width:70px; padding:5px; background:#111; color:white; border:1px solid #444;" placeholder="">
-                                <button class="btn btn-danger" onclick="modifyHeroMoney('${item.id}', -1, 'editor-money-mod')">-</button>
-                                <button class="btn btn-add" onclick="modifyHeroMoney('${item.id}', 1, 'editor-money-mod')">+</button>
+                                <input type="text" id="editor-money-comptant-mod" style="width:70px; padding:5px; background:#111; color:white; border:1px solid #444;" placeholder="">
+                                <button class="btn btn-danger" onclick="modifyHeroMoney('${item.id}', -1, 'editor-money-comptant-mod', 'argentComptant')">-</button>
+                                <button class="btn btn-add" onclick="modifyHeroMoney('${item.id}', 1, 'editor-money-comptant-mod', 'argentComptant')">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col form-block" style="border-color: var(--theme-blue);">
+                        <label style="color:var(--theme-blue);">Compte Bancaire ($)</label>
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            <input type="number" step="0.01" value="${item.compteBancaire}" onchange="updateField('compteBancaire', this.value); updateTopBar();" style="flex:1;">
+                            <div style="display:flex; gap:2px;">
+                                <input type="text" id="editor-money-banque-mod" style="width:70px; padding:5px; background:#111; color:white; border:1px solid #444;" placeholder="">
+                                <button class="btn btn-danger" onclick="modifyHeroMoney('${item.id}', -1, 'editor-money-banque-mod', 'compteBancaire')">-</button>
+                                <button class="btn btn-add" onclick="modifyHeroMoney('${item.id}', 1, 'editor-money-banque-mod', 'compteBancaire')">+</button>
                             </div>
                         </div>
                     </div>
@@ -1175,6 +1095,9 @@
                 </div>
                 <div class="flex-grid">
                     <div class="col form-block"><label>Nom de la compétence</label><input type="text" value="${item.nom}" oninput="updateField('nom', this.value)"></div>
+                    <div class="col form-block"><label>Sous-dossier (Optionnel)</label><input type="text" value="${item.dossier || ''}" placeholder="ex: Magie Feu" oninput="updateField('dossier', this.value)"></div>
+                </div>
+                <div class="flex-grid">
                     <div class="col form-block">
                         <label>Catégorie (Couleur/Icône)</label>
                         <select onchange="updateField('type', this.value)">
@@ -1184,8 +1107,6 @@
                             <option value="Magie" ${item.type === 'Magie'?'selected':''}>✨ Magie (Mauve)</option>
                         </select>
                     </div>
-                </div>
-                <div class="flex-grid">
                     <div class="col form-block"><label>Coût AP (Équipement)</label><input type="number" value="${item.coutAp || 0}" oninput="updateField('coutAp', this.value)"></div>
                     <div class="col form-block"><label>Durée</label><input type="text" value="${item.duree || '-'}" oninput="updateField('duree', this.value)"></div>
                 </div>
@@ -1266,7 +1187,10 @@
                         ${db.heroes.map(h => `<option value="${h.id}" ${item.ownerId === h.id ? 'selected' : ''}>${h.nom}</option>`).join('')}
                     </select>
                 </div>
-                <div class="form-block"><label>Nom de la pièce</label><input type="text" value="${item.nom}" oninput="updateField('nom', this.value)"></div>
+                <div class="flex-grid">
+                    <div class="col form-block"><label>Nom de la pièce</label><input type="text" value="${item.nom}" oninput="updateField('nom', this.value)"></div>
+                    <div class="col form-block"><label>Sous-dossier (Optionnel)</label><input type="text" value="${item.dossier || ''}" placeholder="ex: Armes Lourdes" oninput="updateField('dossier', this.value)"></div>
+                </div>
                 <div class="form-block">
                     <label>Emplacement</label>
                     <select onchange="updateField('type', this.value)">
@@ -1327,6 +1251,7 @@
                 <div class="flex-grid">
                     <div class="col form-block"><label>Nom</label><input type="text" value="${item.nom}" oninput="updateField('nom', this.value)"></div>
                     <div class="col form-block"><label>Quantité en stock</label><input type="number" step="0.01" value="${item.qty}" oninput="updateField('qty', this.value)"></div>
+                    <div class="col form-block"><label>Sous-dossier (Optionnel)</label><input type="text" value="${item.dossier || ''}" placeholder="ex: Soins" oninput="updateField('dossier', this.value)"></div>
                 </div>
                 
                 <div class="flex-grid">
@@ -1499,14 +1424,14 @@
 
     function updateField(key, val) {
         let item = db[activeTab].find(x => x.id === selectedId);
-        let numFields = ['qty', 'bonusSocial', 'coutAp', 'niv', 'maxHp', 'maxSp', 'maxAp', 'hp', 'sp', 'exp', 'argent'];
+        let numFields = ['qty', 'bonusSocial', 'coutAp', 'niv', 'maxHp', 'maxSp', 'maxAp', 'hp', 'sp', 'exp', 'argentComptant', 'compteBancaire'];
         if (numFields.includes(key)) {
             item[key] = Number(String(val).replace(',', '.'));
         } else {
             item[key] = val;
             if (key === 'power' && !isNaN(val) && val.trim() !== '') item[key] = Number(val);
         }
-        if(key === 'nom' || key === 'type' || key === 'folder' || key === 'ownerId' || key === 'actif') renderSidebar();
+        if(key === 'nom' || key === 'type' || key === 'folder' || key === 'ownerId' || key === 'actif' || key === 'dossier') renderSidebar();
         if(key === 'actif') renderEditor();
     }
     
@@ -1536,22 +1461,6 @@
         if(!item.niveaux[index]) item.niveaux[index] = {...DEFAULT_LVL_OBJ};
         if(field === 'cout') val = parseInt(val) || 0;
         item.niveaux[index][field] = val;
-    }
-    
-    window.updateBonusEffet = function(id, index, field, val) {
-        let item = db.bonuses.find(x => x.id === id);
-        item.effets[index][field] = val;
-    }
-    window.addBonusEffet = function(id) {
-        let item = db.bonuses.find(x => x.id === id);
-        if(!item.effets) item.effets = [];
-        item.effets.push({cible: "force", valeur: ""});
-        renderEditor();
-    }
-    window.removeBonusEffet = function(id, index) {
-        let item = db.bonuses.find(x => x.id === id);
-        item.effets.splice(index, 1);
-        renderEditor();
     }
 
     function updateNestedField(p, c, v) { db[activeTab].find(x => x.id === selectedId)[p][c] = Number(v); }
@@ -1987,13 +1896,25 @@
 
                 <div style="background:#111; padding:8px; margin-top:10px; border:1px solid #333; border-left: 4px solid var(--theme-yellow);">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="color:var(--theme-yellow);">Argent Personnel :</strong>
-                        <span style="color:var(--theme-yellow); font-family:'Anton', sans-serif; font-size:1.2rem;">$ ${parseFloat(hero.argent || 0).toFixed(2)}</span>
+                        <strong style="color:var(--theme-yellow);">Argent Comptant :</strong>
+                        <span style="color:var(--theme-yellow); font-family:'Anton', sans-serif; font-size:1.2rem;">$ ${parseFloat(hero.argentComptant || 0).toFixed(2)}</span>
                     </div>
                     <div style="display:flex; gap:5px; margin-top:5px; align-items:center;">
-                        <input type="text" id="play-money-mod" style="flex:1; padding:5px; background:#000; color:white; border:1px solid #444;" placeholder="Montant (ex: 7.55)">
-                        <button class="btn btn-danger" onclick="modifyHeroMoney('${hero.id}', -1, 'play-money-mod')">-</button>
-                        <button class="btn btn-add" onclick="modifyHeroMoney('${hero.id}', 1, 'play-money-mod')">+</button>
+                        <input type="text" id="play-money-comptant-mod" style="flex:1; padding:5px; background:#000; color:white; border:1px solid #444;" placeholder="Montant">
+                        <button class="btn btn-danger" onclick="modifyHeroMoney('${hero.id}', -1, 'play-money-comptant-mod', 'argentComptant')">-</button>
+                        <button class="btn btn-add" onclick="modifyHeroMoney('${hero.id}', 1, 'play-money-comptant-mod', 'argentComptant')">+</button>
+                    </div>
+                </div>
+
+                <div style="background:#111; padding:8px; margin-top:10px; border:1px solid #333; border-left: 4px solid var(--theme-blue);">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="color:var(--theme-blue);">Compte Bancaire :</strong>
+                        <span style="color:var(--theme-blue); font-family:'Anton', sans-serif; font-size:1.2rem;">$ ${parseFloat(hero.compteBancaire || 0).toFixed(2)}</span>
+                    </div>
+                    <div style="display:flex; gap:5px; margin-top:5px; align-items:center;">
+                        <input type="text" id="play-money-banque-mod" style="flex:1; padding:5px; background:#000; color:white; border:1px solid #444;" placeholder="Montant">
+                        <button class="btn btn-danger" onclick="modifyHeroMoney('${hero.id}', -1, 'play-money-banque-mod', 'compteBancaire')">-</button>
+                        <button class="btn btn-add" onclick="modifyHeroMoney('${hero.id}', 1, 'play-money-banque-mod', 'compteBancaire')">+</button>
                     </div>
                 </div>
 
@@ -2181,7 +2102,7 @@
 
         hero.hp = Math.max(0, hero.hp - hpLoss);
         hero.sp = Math.max(0, hero.sp - spLoss);
-        if(moneyLoss > 0) hero.argent = Math.max(0, hero.argent - moneyLoss);
+        if(moneyLoss > 0) hero.argentComptant = Math.max(0, hero.argentComptant - moneyLoss);
         if(essenceLoss > 0) changeDusk(-essenceLoss);
 
         let amount = parseFloat(skill.power) || 0;
@@ -2279,7 +2200,10 @@
         if(!parsed.bonuses) parsed.bonuses = [];
 
         parsed.heroes.forEach(h => {
-            if(h.argent === undefined) h.argent = 0;
+            if(h.argentComptant === undefined) {
+                h.argentComptant = h.argent || 0;
+                h.compteBancaire = 0;
+            }
             if(h.maxAp === undefined) h.maxAp = 5 + ((h.niv || 1) - 1) * 2;
             if(!h.expStats) h.expStats = { force: 0, agilite: 0, investigation: 0, social: 0, dexterite: 0, intuition: 0 };
             if(!h.passifsMagie) h.passifsMagie = [];
@@ -2348,6 +2272,7 @@
                 const migrated = applyMigrations(parsed);
                 if(migrated){
                     db = migrated;
+                    autoSaveEnabled = true;
                     triggerLog("Données synchronisées !");
                     updateTopBar();
                     changeTab('playmode');
@@ -2364,14 +2289,21 @@
             if(res && res.value){
                 const parsed = JSON.parse(res.value);
                 const migrated = applyMigrations(parsed);
-                if(migrated){ db = migrated; return true; }
+                if(migrated){ db = migrated; return 'ok'; }
+                return 'error'; // saved data existed but couldn't be parsed/migrated - don't risk it
             }
-        }catch(e){ console.error('Chargement impossible', e); }
-        return false;
+            return 'empty'; // connection fine, nothing saved yet (legitimate first run)
+        }catch(e){ console.error('Chargement impossible', e); return 'error'; }
     }
 
     async function boot(){
-        await loadFromCloud();
+        const status = await loadFromCloud();
+        if(status === 'error'){
+            autoSaveEnabled = false;
+            alert("Impossible de confirmer l'état de ta sauvegarde en ligne (connexion ou erreur Firebase). Pour éviter d'écraser tes données, la sauvegarde automatique est désactivée pour cette session : utilise le bouton d'export manuel si tu fais des changements, et recharge la page une fois la connexion rétablie.");
+        } else {
+            autoSaveEnabled = true;
+        }
         updateTopBar();
         renderSidebar(); renderEditor();
     }
